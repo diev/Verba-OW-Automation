@@ -46,6 +46,9 @@ namespace Verba
     }
     #endregion Structures
 
+    /// <summary>
+    /// Wrapper-класс методов DLL
+    /// </summary>
     public static class Wbotho
     {
         #region Key
@@ -233,6 +236,101 @@ namespace Verba
         public static extern void FreeMemory(CheckStatus[] list);
     }
 
+    /// <summary>
+    /// Класс методов для поточных PowerShell Process{}
+    /// </summary>
+    public static class Posh
+    {
+        /// <summary>
+        /// Зашифровать файл
+        /// </summary>
+        /// <param name="fileIn">Исходный файл</param>
+        /// <param name="fileOut">Зашифрованный файл</param>
+        /// <param name="id">Номер отправителя (серия опционально)</param>
+        /// <param name="to">Номера получателей (той же серии) ...</param>
+        public static int Encrypt(string fileIn, string fileOut, string id, params string[] to)
+        {
+            string ser = "";
+            if (id.Length == 10)
+            {
+                id = id.Substring(0, 4);
+                ser = id.Substring(4);
+            }
+            ushort[] nodes = new ushort[to.Length + 1];
+            for (int i = 0; i < to.Length; i++)
+            {
+                nodes[i] = ushort.Parse(to[i]);
+            }
+            nodes[to.Length] = 0;
+            return Wbotho.EnCryptFile(fileIn, fileOut, ushort.Parse(id), nodes, ser);
+        }
+
+        /// <summary>
+        /// Расшифровать файл
+        /// </summary>
+        /// <param name="fileIn">Исходный файл</param>
+        /// <param name="fileOut">Расшифрованный файл</param>
+        /// <param name="id">Номер получателя</param>
+        public static int Decrypt(string fileIn, string fileOut, string id)
+        {
+            return Wbotho.DeCryptFile(fileIn, fileOut, ushort.Parse(id));
+        }
+
+        /// <summary>
+        /// Подписать файл
+        /// </summary>
+        /// <param name="fileIn">Исходный файл</param>
+        /// <param name="fileOut">Подписанный файл</param>
+        /// <param name="id">Код аутентификации (КА)</param>
+        public static int Sign(string fileIn, string fileOut, string id)
+        {
+            return Wbotho.SignFile(fileIn, fileOut, id);
+        }
+
+        /// <summary>
+        /// Проверить все подписи в конце файла (новое: они реально проверяются)
+        /// </summary>
+        /// <param name="file">Файл с подписями</param>
+        public static int Verify(string file, string pub)
+        {
+            int ret;
+            byte count;
+            CheckStatus[] signList;
+            if ((ret = Wbotho.CheckFileSign(file, out count, out signList)) > 0)
+            {
+                return ret;
+            }
+            for (int i = 0; i < count; i++)
+            {
+                switch (signList[i].Status)
+                {
+                    case 0: //CORRECT
+                        break;
+                    case 1: //NOT_CORRECT
+                        ret = 26;
+                        break;
+                    case 2: //OKEY_NOT_FOUND
+                        ret = 6;
+                        break;
+                }
+            }
+            Wbotho.FreeMemory(signList);
+            return ret;
+        }
+
+        /// <summary>
+        /// Удалить все подписи в конце файла (новое: без параметра с числом их, -1 всегда)
+        /// </summary>
+        /// <param name="file">Файл с подписями</param>
+        public static int Unsign(string file)
+        {
+            return Wbotho.DelSign(file, -1);
+        }
+    }
+
+    /// <summary>
+    /// Класс методов совместимости с консольной утилитой Wftesto
+    /// </summary>
     public static class Wftesto
     {
         /// <summary>
@@ -251,32 +349,20 @@ namespace Verba
         /// </remarks>
         public static int Encrypt(string fileIn, string fileOut, string sec, string pub, string id, params string[] to)
         {
-            ushort ret = Wbotho.CryptoInit(sec, pub);
-            if (ret > 0) {
+            int ret;
+            if ((ret = Wbotho.CryptoInit(sec, pub)) > 0)
+            {
                 Console.WriteLine("CryptoInit error : {0}", ret);
                 return ret;
             }
-            string ser = "";
-            if (id.Length == 10)
-            {
-                id = id.Substring(0, 4);
-                ser = id.Substring(4);
-            }
-            ushort[] nodes = new ushort[to.Length + 1];
-            for (int i = 0; i < to.Length; i++)
-            {
-                nodes[i] = ushort.Parse(to[i]);
-            }
-            nodes[to.Length] = 0;
-            ret = Wbotho.EnCryptFile(fileIn, fileOut, ushort.Parse(id), nodes, ser);
-            if (ret > 0)
+            if ((ret = Posh.Encrypt(fileIn, fileOut, id, to)) > 0)
             {
                 Console.WriteLine("EnCryptFile error : {0}", ret);
                 return ret;
             }
             Wbotho.CryptoDone();
             Console.WriteLine("File {0} encrypted to {1}", fileIn, fileOut);
-            return 0;
+            return ret;
         }
 
         /// <summary>
@@ -290,21 +376,20 @@ namespace Verba
         /// <remarks>wftesto.exe d file.cry file.txt c:\key c:\pub 1810</remarks>
         public static int Decrypt(string fileIn, string fileOut, string sec, string pub, string id)
         {
-            ushort ret = Wbotho.CryptoInit(sec, pub);
-            if (ret > 0)
+            int ret;
+            if ((ret = Wbotho.CryptoInit(sec, pub)) > 0)
             {
                 Console.WriteLine("CryptoInit error : {0}", ret);
                 return ret;
             }
-            ret = Wbotho.DeCryptFile(fileIn, fileOut, ushort.Parse(id));
-            if (ret > 0)
+            if ((ret = Posh.Decrypt(fileIn, fileOut, id)) > 0)
             {
                 Console.WriteLine("DeCryptFile error : {0}", ret);
                 return ret;
             }
             Wbotho.CryptoDone();
             Console.WriteLine("File {0} decrypted to {1}", fileIn, fileOut);
-            return 0;
+            return ret;
         }
 
         /// <summary>
@@ -314,16 +399,15 @@ namespace Verba
         /// <remarks>wftesto.exe g file.cry</remarks>
         public static int GetAbonents(string file)
         {
-            ushort ret = Wbotho.CryptoInit("", "");
-            if (ret > 0)
+            int ret;
+            if ((ret = Wbotho.CryptoInit("", "")) > 0)
             {
                 Console.WriteLine("CryptoInit error : {0}", ret);
                 return ret;
             }
             ushort count = 0;
             ushort[] toList;
-            ret = Wbotho.GetCryptKeysF(file, out count, out toList, "");
-            if (ret > 0)
+            if ((ret = Wbotho.GetCryptKeysF(file, out count, out toList, "")) > 0)
             {
                 Console.WriteLine("GetCryptKeysF error : {0}", ret);
                 return ret;
@@ -335,7 +419,7 @@ namespace Verba
                 Console.WriteLine("ID{0} - {1}", i + 1, toList[i]);
             }
             Wbotho.FreeMemory(toList);
-            return 0;
+            return ret;
         }
 
         /// <summary>
@@ -348,21 +432,20 @@ namespace Verba
         /// <remarks>wftesto.exe s file.txt file.sig a: 000122222201</remarks>
         public static int Sign(string fileIn, string fileOut, string sec, string id)
         {
-            ushort ret = Wbotho.SignInit(sec, "");
-            if (ret > 0)
+            int ret;
+            if ((ret = Wbotho.SignInit(sec, "")) > 0)
             {
                 Console.WriteLine("SignInit error : {0}", ret);
                 return ret;
             }
-            ret = Wbotho.SignFile(fileIn, fileOut, id);
-            if (ret > 0)
+            if ((ret = Posh.Sign(fileIn, fileOut, id)) > 0)
             {
                 Console.WriteLine("SignFile error : {0}", ret);
                 return ret;
             }
             Wbotho.SignDone();
             Console.WriteLine("File {0} signed to {1}", fileIn, fileOut);
-            return 0;
+            return ret;
         }
 
         /// <summary>
@@ -373,22 +456,20 @@ namespace Verba
         /// <remarks>wftesto.exe v file.txt c:\pub</remarks>
         public static int Verify(string file, string pub)
         {
-            ushort ret = Wbotho.SignInit("", pub);
-            if (ret > 0)
+            int ret;
+            if ((ret = Wbotho.SignInit("", pub)) > 0)
             {
                 Console.WriteLine("SignInit error : {0}", ret);
                 return ret;
             }
             byte count;
             CheckStatus[] signList;
-            ret = Wbotho.CheckFileSign(file, out count, out signList);
-            if (ret > 0)
+            if ((ret = Wbotho.CheckFileSign(file, out count, out signList)) > 0)
             {
                 Console.WriteLine("check_file_sign error : {0}", ret);
                 return ret;
             }
             Wbotho.SignDone();
-            ret = 0;
             for (int i = 0; i < count; i++)
             {
                 Console.Write("{0} - ", signList[i].Alias);
@@ -419,21 +500,20 @@ namespace Verba
         /// <remarks>wftesto.exe u file.txt</remarks>
         public static int Unsign(string file)
         {
-            ushort ret = Wbotho.SignInit("", "");
-            if (ret > 0)
+            int ret;
+            if ((ret = Wbotho.SignInit("", "")) > 0)
             {
                 Console.WriteLine("SignInit error : {0}", ret);
                 return ret;
             }
-            ret = Wbotho.DelSign(file, -1);
-            if (ret > 0)
+            if ((ret = Posh.Unsign(file)) > 0)
             {
                 Console.WriteLine("DelSign error : {0}", ret);
                 return ret;
             }
             Wbotho.SignDone();
             Console.WriteLine("Sign deleted in file {0}", file);
-            return 0;
+            return ret;
         }
 
         /// <summary>
@@ -444,14 +524,14 @@ namespace Verba
         /// <remarks>wftesto.exe i [000566666601] [ruToken]</remarks>
         public static int InitKey(string id, string dev)
         {
-            ushort ret = Wbotho.InitKey(dev, id);
-            if (ret > 0)
+            int ret;
+            if ((ret = Wbotho.InitKey(dev, id)) > 0)
             {
                 Console.WriteLine("InitKey error : {0}", ret);
                 return ret;
             }
             Console.WriteLine("InitKey done : {0}", ret);
-            return 0;
+            return ret;
         }
 
         /// <summary>
@@ -461,14 +541,14 @@ namespace Verba
         /// <remarks>wftesto.exe r 000566666601</remarks>
         public static int ResetKey(string id)
         {
-            ushort ret = Wbotho.ResetKeyEx(id, true);
-            if (ret > 0)
+            int ret;
+            if ((ret = Wbotho.ResetKeyEx(id, true)) > 0)
             {
                 Console.WriteLine("ResetKey error : {0}", ret);
                 return ret;
             }
             Console.WriteLine("ResetKey done : {0}", ret);
-            return 0;
+            return ret;
         }
 
         /// <summary>
@@ -477,28 +557,27 @@ namespace Verba
         /// <remarks>wftesto.exe r</remarks>
         public static int ResetKeys()
         {
+            int ret;
             SlotsTable table = new SlotsTable();
             table.Slots = new UsrKeysInfo[16];
             uint count;
-            ushort ret = Wbotho.GetDrvInfo(ref table, out count);
-            if (ret > 0)
+            if ((ret = Wbotho.GetDrvInfo(ref table, out count)) > 0)
             {
                 Console.WriteLine("GetDrvInfo error : {0}", ret);
                 return ret;
             }
-            int errs = 0;
             for (int i = 0; i < count; i++)
             {
                 if (table.Slots[i].Num[0] != '\0') //crypto
                 {
-                    if (0 != ResetKey(table.Slots[i].Num)) errs++;
+                    ret += ResetKey(table.Slots[i].Num);
                 }
                 else if (table.Slots[i].Nump[0] != '\0') //sign
                 {
-                    if (0 != ResetKey(table.Slots[i].Nump)) errs++;
+                    ret += ResetKey(table.Slots[i].Nump);
                 }
             }
-            return errs == 0 ? 0 : 1;
+            return ret == 0 ? ret : 1;
         }
 
         /// <summary>
@@ -507,26 +586,31 @@ namespace Verba
         /// <remarks>wftesto.exe l</remarks>
         public static int ListKeys()
         {
+            int ret;
             SlotsTable table = new SlotsTable();
             table.Slots = new UsrKeysInfo[16];
             uint count;
-            ushort ret = Wbotho.GetDrvInfo(ref table, out count);
-            if (ret > 0)
+            if ((ret = Wbotho.GetDrvInfo(ref table, out count)) > 0)
             {
                 Console.WriteLine("GetDrvInfo error : {0}", ret);
                 return ret;
             }
-            Console.Write("\nDrvInfo:");
+            Console.WriteLine();
+            Console.Write("DrvInfo:");
             for (int i = 0; i < count; i++)
             {
-                Console.WriteLine("\nSlot : {0}", table.Slots[i].KeySlotNumber);
+                Console.WriteLine();
+                Console.WriteLine("Slot : {0}", table.Slots[i].KeySlotNumber);
                 Console.WriteLine("NUM  : {0}", table.Slots[i].Num);
                 Console.WriteLine("NUMP : {0}", table.Slots[i].Nump);
             }
-            return 0;
+            return ret;
         }
     }
 
+    /// <summary>
+    /// Справочник кодов возврата
+    /// </summary>
     public static class Result
     { 
         /// <summary>
@@ -620,49 +704,66 @@ namespace Verba
         }
     }
 
+    /// <summary>
+    /// Класс для тестирования полноты функционирования
+    /// </summary>
     class CheckIntegrity
     {
         static int Main(string[] args)
         {
             if (args.Length > 0)
             {
-                switch (args[0].ToLower())
+                try
                 {
-                    case "e": // file.txt file.cry c:\key\ c:\pub 0005999999 0006 ... //TODO +n
-                        return Wftesto.Encrypt(args[1], args[2], args[3], args[4], args[5], args[6]);
-                    case "d": // file.cry file.txt c:\key c:\pub 1810
-                        return Wftesto.Decrypt(args[1], args[2], args[3], args[4], args[5]);
-                    case "g":
-                        return Wftesto.GetAbonents(args[1]);
-                    case "s": // file.txt file.sig a: 000122222201
-                        return Wftesto.Sign(args[1], args[2], args[3], args[4]);
-                    case "v": // file.txt c:\pub
-                        return Wftesto.Verify(args[1], args[2]);
-                    case "u":
-                        return Wftesto.Unsign(args[1]);
-                    case "i": // [Key_ID] [Key_Dev]
-                        switch (args.Length)
-                        {
-                            case 3: return Wftesto.InitKey(args[1], args[2]);
-                            case 2: return Wftesto.InitKey(args[1], "");
-                            case 1: return Wftesto.InitKey("", "");
-                        }
-                        break;
-                    case "r":
-                        switch (args.Length)
-                        {
-                            case 2: return Wftesto.ResetKey(args[1]);
-                            case 1: return Wftesto.ResetKeys();
-                        }
-                        break;
-                    case "l":
-                        return Wftesto.ListKeys();
-                    default:
-                        //Console.WriteLine(Result.Text(0));
-                        break;
+                    switch (args[0].ToLower())
+                    {
+                        case "e": // file.txt file.cry c:\key\ c:\pub 0005999999 0006 ... //TODO +n
+                            return Wftesto.Encrypt(args[1], args[2], args[3], args[4], args[5], args[6]);
+                        case "d": // file.cry file.txt c:\key c:\pub 1810
+                            return Wftesto.Decrypt(args[1], args[2], args[3], args[4], args[5]);
+                        case "g":
+                            return Wftesto.GetAbonents(args[1]);
+                        case "s": // file.txt file.sig a: 000122222201
+                            return Wftesto.Sign(args[1], args[2], args[3], args[4]);
+                        case "v": // file.txt c:\pub
+                            return Wftesto.Verify(args[1], args[2]);
+                        case "u":
+                            return Wftesto.Unsign(args[1]);
+                        case "i": // [Key_ID] [Key_Dev]
+                            switch (args.Length)
+                            {
+                                case 3: return Wftesto.InitKey(args[1], args[2]);
+                                case 2: return Wftesto.InitKey(args[1], "");
+                                case 1: return Wftesto.InitKey("", "");
+                            }
+                            break;
+                        case "r":
+                            switch (args.Length)
+                            {
+                                case 2: return Wftesto.ResetKey(args[1]);
+                                case 1: return Wftesto.ResetKeys();
+                            }
+                            break;
+                        case "l":
+                            return Wftesto.ListKeys();
+
+                        case "?": //
+                            Console.WriteLine("Справка: " + Result.Text(int.Parse(args[1])));
+                            return 0;
+
+                        default:
+                            Console.WriteLine("Непонятная команда: " + args[0]);
+                            return 1;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Ошибка в параметрах: " + e.Message);
+                    return 1;
                 }
             }
-            return 1;
+            Console.WriteLine(Result.Text(0)); //TODO Usage
+            return 0;
         }
     }
 }
