@@ -12,6 +12,9 @@ using System.Runtime.InteropServices;
 namespace Verba
 {
     #region Structures
+    /// <summary>
+    /// Запись в таблице слотов драйвера
+    /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi), Serializable]
     public struct UsrKeysInfo
     {
@@ -25,6 +28,9 @@ namespace Verba
         public uint KeySlotNumber; // T32bit KeySlotNumber
     }
 
+    /// <summary>
+    /// Таблица слотов драйвера (0-15)
+    /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     public struct SlotsTable
     {
@@ -32,6 +38,9 @@ namespace Verba
         public UsrKeysInfo[] Slots;
     }
 
+    /// <summary>
+    /// Запись о состоянии проверки подписи (одна или более)
+    /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi), Serializable]
     public struct CheckStatus
     {
@@ -291,7 +300,7 @@ namespace Verba
         /// Проверить все подписи в конце файла (новое: они реально проверяются)
         /// </summary>
         /// <param name="file">Файл с подписями</param>
-        public static int Verify(string file, string pub)
+        public static int Verify(string file)
         {
             int ret;
             byte count;
@@ -405,7 +414,7 @@ namespace Verba
                 Console.WriteLine("CryptoInit error : {0}", ret);
                 return ret;
             }
-            ushort count = 0;
+            ushort count;
             ushort[] toList;
             if ((ret = Wbotho.GetCryptKeysF(file, out count, out toList, "")) > 0)
             {
