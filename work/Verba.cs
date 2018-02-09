@@ -39,7 +39,7 @@ namespace Verba
     }
 
     /// <summary>
-    /// Запись о состоянии проверки подписи (одна или более)
+    /// Запись о состоянии проверки подписи
     /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi), Serializable]
     public struct CheckStatus
@@ -52,6 +52,16 @@ namespace Verba
         public byte Status;        // T8bit Status;
         public uint Date;          // T32bit Date;
                                    // UTC time_t, use DateTime(1970, 1, 1).ToLocalTime().AddSeconds(time_t)
+    }
+
+    /// <summary>
+    /// Список записей о состоянии проверки каждой подписи
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct CheckList
+    {
+        [MarshalAs(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.Struct)]
+        public CheckStatus[] Signs;
     }
     #endregion Structures
 
@@ -117,12 +127,12 @@ namespace Verba
         /// <param name="fileIn">Исходный открытый файл</param>
         /// <param name="fileOut">Зашифрованный файл</param>
         /// <param name="id">Свой идентификатор (XXXX)</param>
-        /// <param name="toList">Массив криптографических номеров получателей</param>
+        /// <param name="list">Массив криптографических номеров получателей</param>
         /// <param name="ser">Номер подсети (серии) SSSSSS, куда направляется файл</param>
         /// <returns>0 или код ошибки</returns>
         /// <remarks>extern T16bit WINAPI EnCryptFile (char* file_in, char* file_out, T16bit node_From, P16bit node_To, char* ser);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "EnCryptFile", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort EnCryptFile(string fileIn, string fileOut, ushort id, ushort[] toList,
+        public static extern ushort EnCryptFile(string fileIn, string fileOut, ushort id, ushort[] list,
             [MarshalAs(UnmanagedType.LPStr, SizeConst = 7)] string ser);
 
         /// <summary>
@@ -218,7 +228,7 @@ namespace Verba
         /// <returns>0 или код ошибки</returns>
         /// <remarks>extern T16bit WINAPI check_file_sign (char* file_name, P8bit count, Check_Status_Ptr* stat_array);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "check_file_sign", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort CheckFileSign(string file, out byte count, out CheckStatus[] list);
+        public static extern ushort CheckFileSign(string file, out byte count, out CheckList list);
         // FreeMemory(list) finally!
         #endregion Sign
 
@@ -242,7 +252,7 @@ namespace Verba
         /// </summary>
         /// <param name="list">Указатель, полученный в CheckFileSign()</param>
         [DllImport("wbotho.dll", EntryPoint = "FreeMemory", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern void FreeMemory(CheckStatus[] list);
+        public static extern void FreeMemory(CheckList list);
     }
 
     /// <summary>
@@ -304,14 +314,14 @@ namespace Verba
         {
             int ret;
             byte count;
-            CheckStatus[] signList;
-            if ((ret = Wbotho.CheckFileSign(file, out count, out signList)) > 0)
+            CheckList list;
+            if ((ret = Wbotho.CheckFileSign(file, out count, out list)) > 0)
             {
                 return ret;
             }
             for (int i = 0; i < count; i++)
             {
-                switch (signList[i].Status)
+                switch (list.Signs[i].Status)
                 {
                     case 0: //CORRECT
                         break;
@@ -323,7 +333,7 @@ namespace Verba
                         break;
                 }
             }
-            Wbotho.FreeMemory(signList);
+            Wbotho.FreeMemory(list);
             return ret;
         }
 
@@ -415,8 +425,8 @@ namespace Verba
                 return ret;
             }
             ushort count;
-            ushort[] toList;
-            if ((ret = Wbotho.GetCryptKeysF(file, out count, out toList, "")) > 0)
+            ushort[] list;
+            if ((ret = Wbotho.GetCryptKeysF(file, out count, out list, "")) > 0)
             {
                 Console.WriteLine("GetCryptKeysF error : {0}", ret);
                 return ret;
@@ -425,9 +435,9 @@ namespace Verba
             Console.WriteLine("File {0} is encrypted for these abonents :", file); //новое: исправлено слово
             for (int i = 0; i < count; i++)
             {
-                Console.WriteLine("ID{0} - {1}", i + 1, toList[i]);
+                Console.WriteLine("ID{0} - {1}", i + 1, list[i]);
             }
-            Wbotho.FreeMemory(toList);
+            Wbotho.FreeMemory(list);
             return ret;
         }
 
@@ -472,8 +482,8 @@ namespace Verba
                 return ret;
             }
             byte count;
-            CheckStatus[] signList;
-            if ((ret = Wbotho.CheckFileSign(file, out count, out signList)) > 0)
+            CheckList list;
+            if ((ret = Wbotho.CheckFileSign(file, out count, out list)) > 0)
             {
                 Console.WriteLine("check_file_sign error : {0}", ret);
                 return ret;
@@ -481,8 +491,8 @@ namespace Verba
             Wbotho.SignDone();
             for (int i = 0; i < count; i++)
             {
-                Console.Write("{0} - ", signList[i].Alias);
-                switch (signList[i].Status)
+                Console.Write("{0} - ", list.Signs[i].Alias);
+                switch (list.Signs[i].Status)
                 {
                     case 0: //CORRECT
                         Console.WriteLine("sign is OK");
@@ -497,7 +507,7 @@ namespace Verba
                         break;
                 }
             }
-            Wbotho.FreeMemory(signList);
+            Wbotho.FreeMemory(list);
             Console.WriteLine("File {0} verified", file);
             return ret;
         }

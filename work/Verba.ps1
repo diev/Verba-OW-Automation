@@ -3,8 +3,11 @@
 # Пример вызова функции из любого скрипта PS:
 # . $localDir"verba.ps1" -logfile $log	# Подключаем модуль Верба
 # $files = Get-ChildItem -Recurse $folder | Where {!$_.PSisContainer}
-# $files | Sign  -KeyPath $keyCB.path  -KeyNumber "$($keyCB.me)$($keyCB.Seria)"
-# $files | Crypt -KeyPath $keyFNS.path -KeyFrom $keyFNS.me -KeyTo $KeyFNS.to -KeySeria $KeyFNS.Seria
+# $files | Sign    -KeyPath $keyCB.path  -KeyNumber "$($keyCB.me)$($keyCB.seria)01"
+# $files | Encrypt -KeyPath $keyFNS.path -KeyFrom   $keyFNS.me -KeyTo    $KeyFNS.to    -KeySeria $KeyFNS.seria
+# $files | Decrypt -KeyPath $keyFNS.path -KeyTo     $KeyFNS.me -KeySeria $KeyFNS.seria
+# $files | Verify  -KeyPath $keyCB.path  -KeyNumber "$($keyCB.me)$($keyCB.seria)01"
+# $files | Unsign
 
 Param (
 	$logFile
@@ -60,7 +63,7 @@ Function Encrypt {
 		$command = [Verba.Wbotho]::CryptoDone()
 		log -Event "CryptoDone" -Result $command		
 
-		$command = [Verba.Wbotho]::ResetKeyEx("$($KeyTo)$($KeySeria)", $true)
+		$command = [Verba.Wbotho]::ResetKeyEx("$($KeyFrom)$($KeySeria)", $true)
 		log -Event "ResetKey" -Result $command		
 
 		Return $i
@@ -102,7 +105,7 @@ Function Decrypt {
 	}
 }
 
-Function Sign { # ok
+Function Sign {
 	Param (		
 		$KeyPath,		# Путь к каталогу с ключами
 		$KeyNumber		# Номер ключа		
@@ -143,7 +146,7 @@ Function Sign { # ok
 	}
 }
 
-Function Unsign { # ok
+Function Unsign {
 	Process {
 		$i++       
 		$command = [Verba.Posh]::Unsign($_.FullName)
