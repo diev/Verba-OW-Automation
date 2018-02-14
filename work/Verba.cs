@@ -63,6 +63,26 @@ namespace Verba
         [MarshalAs(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.Struct)]
         public CheckStatus[] Signs;
     }
+
+    /// <summary>
+    /// Запись одного открытого ключа *.pub или *.lfx
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct OpenKey
+    {
+        [MarshalAsAttribute(UnmanagedType.ByValTStr, SizeConst = 304)]
+        public string Record;
+    }
+
+    /// <summary>
+    /// Массив указателей на записи открытых ключей
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct KeyList
+    {
+        [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPStruct)]
+        public OpenKey[] Keys;
+    }
     #endregion Structures
 
     /// <summary>
@@ -70,51 +90,19 @@ namespace Verba
     /// </summary>
     public static class Wbotho
     {
-        #region Key
-        /// <summary>
-        /// Загрузить ключи в драйвер ASYNCR
-        /// </summary>
-        /// <param name="keyDev">Строка с именем ключевого устройства</param>
-        /// <param name="keyId">Идентификатор ключа или пустая строка ("")</param>
-        /// <returns>0 или код ошибки</returns>
-        /// <remarks>extern T16bit WINAPI InitKey (char* key_dev, char* key_ID);</remarks>
-        [DllImport("wbotho.dll", EntryPoint = "InitKey", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort InitKey(string keyDev, string keyId);
-
-        /// <summary>
-        /// Выгрузить ключи из драйвера ASYNCR
-        /// </summary>
-        /// <param name="keyId">Идентификатор ключа</param>
-        /// <param name="flag">Признак возможности выгрузки ключа из "слота" 0: FALSE-выгрузка запрещена, TRUE-разрешена</param>
-        /// <returns>0 или код ошибки</returns>
-        /// <remarks>extern T16bit WINAPI ResetKeyEx (char* key_ID, int flag);</remarks>
-        [DllImport("wbotho.dll", EntryPoint = "ResetKeyEx", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort ResetKeyEx(string keyId, bool flag);
-
-        /// <summary>
-        /// Получить список ключей, загруженных в драйвер ASYNCR
-        /// </summary>
-        /// <param name="keysList">Массив структур с информацией о прогруженных ключах</param>
-        /// <param name="count">Количество загруженных ключевых слотов</param>
-        /// <returns>0 или код ошибки</returns>
-        /// <remarks>extern T16bit WINAPI GetDrvInfo(USR_KEYS_INFO* keys_info, P32bit nKeySlots);</remarks>
-        [DllImport("wbotho.dll", EntryPoint = "GetDrvInfo", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort GetDrvInfo(ref SlotsTable table, out uint count);
-        #endregion Key
-
         #region Crypt
         /// <summary>
-        /// Инициализация функций шифрования
+        /// 8.2 Инициализация функций шифрования
         /// </summary>
-        /// <param name="sec">Указатель на строку полного пути к секретным ключам</param>
-        /// <param name="pub">Указатель на строку полного пути к открытым ключам NULL, если ключи симметричные</param>
+        /// <param name="sec">Строка пути к секретным ключам</param>
+        /// <param name="pub">Строка пути к каталогу OPENKEY или FAXKEY (NULL, если ключи симметричные)</param>
         /// <returns>0 или код ошибки</returns>
         /// <remarks>extern T16bit WINAPI CryptoInit (char* path, char* base_path);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "CryptoInit", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern ushort CryptoInit(string sec, string pub);
 
         /// <summary>
-        /// Завершение функций шифрования
+        /// 8.2 Завершение функций шифрования
         /// </summary>
         /// <returns>0 или код ошибки</returns>
         /// <remarks>extern T16bit WINAPI CryptoDone(void);</remarks>
@@ -122,7 +110,7 @@ namespace Verba
         public static extern ushort CryptoDone();
 
         /// <summary>
-        /// Зашифровывание файла
+        /// 8.3.1 Зашифрование файла
         /// </summary>
         /// <param name="fileIn">Исходный открытый файл</param>
         /// <param name="fileOut">Зашифрованный файл</param>
@@ -136,7 +124,7 @@ namespace Verba
             [MarshalAs(UnmanagedType.LPStr, SizeConst = 7)] string ser);
 
         /// <summary>
-        /// Расшифровать файл
+        /// 8.3.2 Расшифрование файла
         /// </summary>
         /// <param name="fileIn">Исходный зашифрованный файл</param>
         /// <param name="fileOut">Расшифрованный файл</param>
@@ -147,7 +135,7 @@ namespace Verba
         public static extern ushort DeCryptFile(string fileIn, string fileOut, ushort id);
 
         /// <summary>
-        /// Получить список получателей зашифрованного файла
+        /// 8.3.4 Получение списка получателей зашифрованного файла
         /// </summary>
         /// <param name="file">Зашифрованный файл</param>
         /// <param name="count">Число получателей</param>
@@ -159,11 +147,37 @@ namespace Verba
         public static extern ushort GetCryptKeysF(string file, out ushort count, out ushort[] list, //IntPtr toList,
             [MarshalAs(UnmanagedType.LPStr, SizeConst = 7)] string ser);
         // FreeMemory(list) finally!
+
+        /// <summary>
+        /// 8.3.5 Зашифрование файла (расширенное)
+        /// </summary>
+        /// <param name="fileIn">Исходный открытый файл</param>
+        /// <param name="fileOut">Зашифрованный файл</param>
+        /// <param name="id">Свой идентификатор (XXXXSSSSSS)</param>
+        /// <param name="keys">Массив указателей на открытые ключи получателей</param>
+        /// <param name="keysCount">Количество получателей</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI EnCryptFile (char* file_in, char* file_out, char* From, 
+        /// void** open_keys_array, T16bit open_keys_quantity, T32bit flags);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "EnCryptFileEx", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort EnCryptFileEx(string fileIn, string fileOut, string id, KeyList keys, uint keysCount, ulong flags);
+
+        /// <summary>
+        /// 8.3.6 Расшифрование файла (расширенное)
+        /// </summary>
+        /// <param name="fileIn">Исходный зашифрованный файл</param>
+        /// <param name="fileOut">Расшифрованный файл</param>
+        /// <param name="id">Номер получателя (XXXXSSSSSS)</param>
+        /// <param name="key">Указатель на открытый ключ отправителя</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI DeCryptFileEx (char* file_in, char* file_out, char* abonent, void* pub_key);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "DeCryptFileEx", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort DeCryptFileEx(string fileIn, string fileOut, string id, OpenKey key);
         #endregion Crypt
 
         #region Sign
         /// <summary>
-        /// Инициализация функций подписи
+        /// 8.2 Инициализация функций подписи
         /// </summary>
         /// <param name="sec">Путь к файлу с секретным ключом подписи</param>
         /// <param name="pub">Путь к базе открытых ключей подписи</param>
@@ -173,7 +187,7 @@ namespace Verba
         public static extern ushort SignInit(string sec, string pub);
 
         /// <summary>
-        /// Завершение работы с библиотеками подписи
+        /// 8.2 Завершение работы с библиотеками подписи
         /// </summary>
         /// <returns>0 или код ошибки</returns>
         /// <remarks>extern T16bit WINAPI SignDone (void);</remarks>
@@ -181,7 +195,7 @@ namespace Verba
         public static extern ushort SignDone();
 
         /// <summary>
-        /// Прочитать ключ подписи абонента в память
+        /// 8.7.1 Загрузка ключа подписи в оперативную память
         /// </summary>
         /// <param name="sec">Путь к файлу с секретным ключом подписи</param>
         /// <returns>0 или код ошибки</returns>
@@ -190,7 +204,7 @@ namespace Verba
         public static extern ushort SignLogIn(string sec);
 
         /// <summary>
-        /// Удалить ключ подписи из памяти
+        /// 8.7.2 Удаление ключа подписи из оперативной памяти
         /// </summary>
         /// <returns>0 или код ошибки</returns>
         /// <remarks>extern T16bit WINAPI SignLogOut (void);</remarks>
@@ -198,7 +212,7 @@ namespace Verba
         public static extern ushort SignLogOut();
 
         /// <summary>
-        /// Подпись файла
+        /// 8.8.1 Подпись файла с добавлением подписи в конец подписываемого файла
         /// </summary>
         /// <param name="fileIn">Исходный файл для подписывания</param>
         /// <param name="fileOut">Подписанный файл</param>
@@ -210,17 +224,7 @@ namespace Verba
             [MarshalAs(UnmanagedType.LPStr, SizeConst = 13)] string id);
 
         /// <summary>
-        /// Удаление подписей с конца файла
-        /// </summary>
-        /// <param name="file">Полное имя файла</param>
-        /// <param name="count">Количество удаляемых подписей, (-1) - удалить все подписи</param>
-        /// <returns>0 или код ошибки</returns>
-        /// <remarks>extern T16bit WINAPI DelSign (char* file_name, T8bit count);</remarks>
-        [DllImport("wbotho.dll", EntryPoint = "DelSign", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort DelSign(string file, sbyte count);
-
-        /// <summary>
-        /// Проверка подписей под файлом
+        /// 8.8.3 Проверка подписи, добавленной в конец исходного файла
         /// </summary>
         /// <param name="file">Полное имя файла</param>
         /// <param name="count">Число обнаруженных подписей</param>
@@ -230,10 +234,34 @@ namespace Verba
         [DllImport("wbotho.dll", EntryPoint = "check_file_sign", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern ushort CheckFileSign(string file, out byte count, out CheckList list);
         // FreeMemory(list) finally!
-        #endregion Sign
 
         /// <summary>
-        /// Освободить память, распределенную библиотекой
+        /// 8.8.4 Проверка подписи, добавленной в конец исходного файла (расширенная)
+        /// </summary>
+        /// <param name="file">Полное имя файла</param>
+        /// <param name="count">Число обнаруженных подписей</param>
+        /// <param name="list">Массив результатов проверки каждой подписи</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI check_file_sign_ex(char* file_name, void** open_keys_array, unsigned long open_keys_quantity, 
+        /// unsigned char* count, Check_Status_Ptr* status_array);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "check_file_sign_ex", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort CheckFileSignEx(string file, KeyList keys, uint keysCount, out byte count, out CheckList list);
+        // FreeMemory(list) finally!
+
+        /// <summary>
+        /// 8.8.6 Удаление подписи, добавленной в конец исходного файла
+        /// </summary>
+        /// <param name="file">Полное имя файла</param>
+        /// <param name="count">Количество удаляемых подписей, (-1) - удалить все подписи</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI DelSign (char* file_name, T8bit count);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "DelSign", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort DelSign(string file, sbyte count);
+        #endregion Sign
+
+        #region Free
+        /// <summary>
+        /// 8.12 Освобождение памяти, используемой при работе СКЗИ
         /// </summary>
         /// <param name="lpMemory">Указатель, полученный в функциях библиотеки</param>
         /// <remarks>extern void WINAPI FreeMemory (void* lpMemory);</remarks>
@@ -241,18 +269,88 @@ namespace Verba
         public static extern void FreeMemory(IntPtr lpMemory);
 
         /// <summary>
-        /// Освободить память, распределенную библиотекой
+        /// 8.12 Освобождение памяти, используемой при работе СКЗИ
         /// </summary>
         /// <param name="list">Указатель, полученный в GetCryptKeysF()</param>
         [DllImport("wbotho.dll", EntryPoint = "FreeMemory", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern void FreeMemory(ushort[] list);
 
         /// <summary>
-        /// Освободить память, распределенную библиотекой
+        /// 8.12 Освобождение памяти, используемой при работе СКЗИ
         /// </summary>
         /// <param name="list">Указатель, полученный в CheckFileSign()</param>
         [DllImport("wbotho.dll", EntryPoint = "FreeMemory", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern void FreeMemory(CheckList list);
+        #endregion Free
+
+        #region Spr
+        /// <summary>
+        /// 9.3.5 Добавление открытого ключа в справочник
+        /// </summary>
+        /// <param name="pub">Строка пути к каталогу OPENKEY или FAXKEY (если их нет - создаются)</param>
+        /// <param name="key">Блок памяти размером 304 байт, в котором находится открытый ключ</param>
+        /// <param name="id">Строка идентификатора ключа (XXXXSSSSSS[YY])</param>
+        /// <param name="se">байт, указывающий, в какой справочник добавляется ключ ('S' или 'E')</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI AddOpenKey (char* base_dir, void* open_key, char* my_ID, char S_or_E);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "AddOpenKey", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort AddOpenKey(string pub, OpenKey key, string id, byte se);
+
+        /// <summary>
+        /// 9.3.13 Выработка имитовставки для справочника
+        /// </summary>
+        /// <param name="pub">Строка пути к каталогу OPENKEY или FAXKEY</param>
+        /// <param name="ser">Строка с номером серии открытого ключа, на котором подписывается справочник</param>
+        /// <param name="id">Строка идентификатора ключа (XXXXSSSSSS[YY]), на котором будет выработана имитовставка</param>
+        /// <param name="se">байт, указывающий, для какого справочника ('S' или 'E')</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI SignSpr (char* base_dir, char* ser, char* my_ID, char S_or_E);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "SignSpr", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort SignSpr(string pub, string ser, string id, byte se);
+
+        /// <summary>
+        /// 9.3.15 Считывание открытого ключа из справочника в память
+        /// </summary>
+        /// <param name="pub">Строка пути к каталогу OPENKEY или FAXKEY</param>
+        /// <param name="id">Строка идентификатора ключа (XXXXSSSSSS[YY])</param>
+        /// <param name="key">Блок памяти размером 304 байт, в который считывается указанный открытый ключ</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI ExtractKey (char* base_dir, char* open_key_ID, void* key);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "ExtractKey", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort ExtractKey(string pub, string id, out OpenKey key);
+        #endregion Spr
+
+        #region Key
+        /// <summary>
+        /// 9.4.2 Загрузка ключей в драйвер ASYNCR
+        /// </summary>
+        /// <param name="keyDev">Строка с именем ключевого устройства</param>
+        /// <param name="keyId">Идентификатор ключа или пустая строка ("")</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI InitKey (char* key_dev, char* key_ID);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "InitKey", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort InitKey(string keyDev, string keyId);
+
+        /// <summary>
+        /// 9.4.3 Выгрузка ключей из драйвера ASYNCR
+        /// </summary>
+        /// <param name="keyId">Идентификатор ключа</param>
+        /// <param name="flag">Признак возможности выгрузки ключа из "слота" 0: FALSE-выгрузка запрещена, TRUE-разрешена</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI ResetKeyEx (char* key_ID, int flag);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "ResetKeyEx", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort ResetKeyEx(string keyId, bool flag);
+
+        /// <summary>
+        /// 9.4.4 Получение списка ключей, загруженных в драйвер ASYNCR
+        /// </summary>
+        /// <param name="keysList">Массив структур с информацией о прогруженных ключах</param>
+        /// <param name="count">Количество загруженных ключевых слотов</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI GetDrvInfo(USR_KEYS_INFO* keys_info, P32bit nKeySlots);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "GetDrvInfo", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort GetDrvInfo(ref SlotsTable table, out uint count);
+        #endregion Key
     }
 
     /// <summary>
