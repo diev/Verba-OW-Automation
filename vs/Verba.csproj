@@ -34,7 +34,7 @@
     <RootNamespace>Verba</RootNamespace>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>Verba.CheckIntegrity</StartupObject>
+    <StartupObject>Verba.VerbaTest</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
@@ -48,6 +48,7 @@
   <ItemGroup>
     <Compile Include="..\work\Verba.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VerbaTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

@@ -15,107 +15,106 @@ Param (
 
 # Определяем рабочий каталог
 $dir = (Split-Path -Parent $MyInvocation.MyCommand.Definition) + "\"
-Add-Type -Path $dir"Verba.cs" # Подключаем модуль для шифрования
+Add-Type -Path $dir"Verba.cs"	# Подключаем модуль библиотек
 
-Function Log
-{
+Function Log {
 	Param (
 		$event,
 		$result
-	)	
+	)
 
 	$error = [Verba.Result]::Text($result)
 	"$event : $error" | Out-File $logFile -Append
 
-	if ($result) {		
-		Write-Host -ForegroundColor Red "ОШИБКА. РАБОТА СКРИПТА ОСТАНОВЛЕНА. СООБЩИТЕ АДМИНИСТРАТОРУ"		
-		Write-Host -ForegroundColor Red "$event : $error"		
+	if ($result) {
+		Write-Host -ForegroundColor Red "ОШИБКА. РАБОТА СКРИПТА ОСТАНОВЛЕНА. СООБЩИТЕ АДМИНИСТРАТОРУ"
+		Write-Host -ForegroundColor Red "$event : $error"
 		Exit
-	}			
+	}
 }
 
 Function Encrypt {
-	Param (		
-		$KeyPath,		# Путь к каталогу с ключами
-		$KeyFrom,		# Номер ключа отправителя
-		$KeyTo,			# Номер ключа получателя
-		$KeySeria		# Серия ключа
+	Param (
+		$KeyPath,	# Путь к каталогу с ключами
+		$KeyFrom,	# Номер ключа отправителя
+		$KeyTo,		# Номер ключа получателя
+		$KeySeria	# Серия ключа
 	)
 
 	Begin {
 		$i = 0;
 		$command = [Verba.Wbotho]::InitKey("A:", "")
-		log -Event "InitKey" -Result $command		
-		
+		log -Event "InitKey" -Result $command
+
 		$command = [Verba.Wbotho]::CryptoInit($KeyPath, $KeyPath)
-		log -Event "CryptoInit" -Result $command		
+		log -Event "CryptoInit" -Result $command
 	}
-	
-        Process {
+
+	Process {
 		$i++
 		$command = [Verba.Posh]::Encrypt($_.FullName, $_.FullName, $KeyFrom, $KeyTo)
-		log -Event "Encrypt $_" -Result $command				
+		log -Event "Encrypt $_" -Result $command
 
 		Write-Progress -Activity "Шифруем" -Status "Зашифровано $i" 
 	}
 
 	End {
 		$command = [Verba.Wbotho]::CryptoDone()
-		log -Event "CryptoDone" -Result $command		
+		log -Event "CryptoDone" -Result $command
 
 		$command = [Verba.Wbotho]::ResetKeyEx("$($KeyFrom)$($KeySeria)", $true)
-		log -Event "ResetKey" -Result $command		
+		log -Event "ResetKey" -Result $command
 
 		Return $i
 	}
 }
 
 Function Decrypt {
-	Param (		
-		$KeyPath,		# Путь к каталогу с ключами
-		$KeyTo,			# Номер ключа получателя
-		$KeySeria		# Серия ключа
+	Param (
+		$KeyPath,	# Путь к каталогу с ключами
+		$KeyTo,		# Номер ключа получателя
+		$KeySeria	# Серия ключа
 	)
 
 	Begin {
 		$i = 0;
 		$command = [Verba.Wbotho]::InitKey("A:", "")
-		log -Event "InitKey" -Result $command		
-		
+		log -Event "InitKey" -Result $command
+
 		$command = [Verba.Wbotho]::CryptoInit($KeyPath, $KeyPath)
-		log -Event "CryptoInit" -Result $command		
+		log -Event "CryptoInit" -Result $command
 	}
 
 	Process {
 		$i++
 		$command = [Verba.Posh]::Decrypt($_.FullName, $_.FullName, $KeyTo)
-		log -Event "Decrypt $_" -Result $command				
+		log -Event "Decrypt $_" -Result $command
 
-		Write-Progress -Activity "Расшифровываем" -Status "Расшифровано $i" 
+		Write-Progress -Activity "Расшифровываем" -Status "Расшифровано $i"
 	}
 
 	End {
 		$command = [Verba.Wbotho]::CryptoDone()
-		log -Event "CryptoDone" -Result $command		
+		log -Event "CryptoDone" -Result $command
 
 		$command = [Verba.Wbotho]::ResetKeyEx("$($KeyTo)$($KeySeria)", $true)
-		log -Event "ResetKey" -Result $command		
+		log -Event "ResetKey" -Result $command
 
 		Return $i
 	}
 }
 
 Function Sign {
-	Param (		
-		$KeyPath,		# Путь к каталогу с ключами
-		$KeyNumber		# Номер ключа		
+	Param (
+		$KeyPath,	# Путь к каталогу с ключами
+		$KeyNumber	# Номер ключа
 	)
 
 	Begin {
-                $i = 0;
+		$i = 0;
 		$command = [Verba.Wbotho]::InitKey("A:", "")
-		log -Event "InitKey" -Result $command		
-		
+		log -Event "InitKey" -Result $command
+
 		$command = [Verba.Wbotho]::SignInit("", $KeyPath)
 		log -Event "SignInit" -Result $command
 
@@ -123,11 +122,10 @@ Function Sign {
 		log -Event "SignLogIn" -Result $command
 	}
 
-	Process 
-	{	
-		$i++       
+	Process {
+		$i++
 		$command = [Verba.Posh]::Sign($_.FullName, $_.FullName, $KeyNumber)
-		log -Event "Sign $_" -Result $command				
+		log -Event "Sign $_" -Result $command
 
 		Write-Progress -Activity "Подписываем" -Status "Подписано $i" 
 	}
@@ -137,40 +135,40 @@ Function Sign {
 		log -Event "SignLogOut" -Result $command
 
 		$command = [Verba.Wbotho]::SignDone()
-		log -Event "SignDone" -Result $command	
+		log -Event "SignDone" -Result $command
 
 		$command = [Verba.Wbotho]::ResetKeyEx($KeyNumber, $true)
 		log -Event "ResetKey" -Result $command	
 
-		Return $i	
+		Return $i
 	}
 }
 
 Function Unsign {
 	Process {
-		$i++       
+		$i++
 		$command = [Verba.Posh]::Unsign($_.FullName)
-		log -Event "Unsign $_" -Result $command				
+		log -Event "Unsign $_" -Result $command
 
 		Write-Progress -Activity "Отрезаем" -Status "Отрезано $i" 
 	}
 
 	End {
-		Return $i	
+		Return $i
 	}
 }
 
 Function Verify {
-	Param (		
-		$KeyPath,		# Путь к каталогу с ключами
-		$KeyNumber		# Номер ключа		
+	Param (
+		$KeyPath,	# Путь к каталогу с ключами
+		$KeyNumber	# Номер ключа
 	)
 
 	Begin {
-                $i = 0;
+		$i = 0;
 		$command = [Verba.Wbotho]::InitKey("A:", "")
-		log -Event "InitKey" -Result $command		
-		
+		log -Event "InitKey" -Result $command
+
 		$command = [Verba.Wbotho]::SignInit("", $KeyPath)
 		log -Event "SignInit" -Result $command
 
@@ -179,11 +177,11 @@ Function Verify {
 	}
 
 	Process {
-		$i++       
+		$i++
 		$command = [Verba.Posh]::Verify($_.FullName)
-		log -Event "Verify $_" -Result $command				
+		log -Event "Verify $_" -Result $command
 
-		Write-Progress -Activity "Проверяем" -Status "Проверено $i" 
+		Write-Progress -Activity "Проверяем" -Status "Проверено $i"
 	}
 
 	End {
@@ -191,11 +189,11 @@ Function Verify {
 		log -Event "SignLogOut" -Result $command
 
  		$command = [Verba.Wbotho]::SignDone()
-		log -Event "SignDone" -Result $command	
+		log -Event "SignDone" -Result $command
 
 		$command = [Verba.Wbotho]::ResetKeyEx($KeyNumber, $true)
-		log -Event "ResetKey" -Result $command	
+		log -Event "ResetKey" -Result $command
 
-		Return $i	
+		Return $i
 	}
 }
