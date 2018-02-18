@@ -35,16 +35,16 @@ Function Log {
 
 Function Encrypt {
 	Param (
-		$KeyPath,	# Путь к каталогу с ключами
+		$KeyPath = "C:\Pub",	# Путь к каталогу с ключами
 		$KeyFrom,	# Номер ключа отправителя
-		$KeyTo,		# Номер ключа получателя
-		$KeySeria	# Серия ключа
+		$KeyTo		# Номер ключа получателя
+		#$KeySeria	# Серия ключа
 	)
 
 	Begin {
 		$i = 0;
-		$command = [Verba.Wbotho]::InitKey("A:", "")
-		log -Event "InitKey" -Result $command
+		#$command = [Verba.Wbotho]::InitKey("A:", "")
+		#log -Event "InitKey" -Result $command
 
 		$command = [Verba.Wbotho]::CryptoInit($KeyPath, $KeyPath)
 		log -Event "CryptoInit" -Result $command
@@ -62,8 +62,8 @@ Function Encrypt {
 		$command = [Verba.Wbotho]::CryptoDone()
 		log -Event "CryptoDone" -Result $command
 
-		$command = [Verba.Wbotho]::ResetKeyEx("$($KeyFrom)$($KeySeria)", $true)
-		log -Event "ResetKey" -Result $command
+		#$command = [Verba.Wbotho]::ResetKeyEx("$($KeyFrom)$($KeySeria)", $true)
+		#log -Event "ResetKey" -Result $command
 
 		Return $i
 	}
@@ -71,15 +71,15 @@ Function Encrypt {
 
 Function Decrypt {
 	Param (
-		$KeyPath,	# Путь к каталогу с ключами
-		$KeyTo,		# Номер ключа получателя
-		$KeySeria	# Серия ключа
+		$KeyPath = "C:\Pub",	# Путь к каталогу с ключами
+		$KeyTo		# Номер ключа получателя
+		#$KeySeria	# Серия ключа
 	)
 
 	Begin {
 		$i = 0;
-		$command = [Verba.Wbotho]::InitKey("A:", "")
-		log -Event "InitKey" -Result $command
+		#$command = [Verba.Wbotho]::InitKey("A:", "")
+		#log -Event "InitKey" -Result $command
 
 		$command = [Verba.Wbotho]::CryptoInit($KeyPath, $KeyPath)
 		log -Event "CryptoInit" -Result $command
@@ -97,8 +97,8 @@ Function Decrypt {
 		$command = [Verba.Wbotho]::CryptoDone()
 		log -Event "CryptoDone" -Result $command
 
-		$command = [Verba.Wbotho]::ResetKeyEx("$($KeyTo)$($KeySeria)", $true)
-		log -Event "ResetKey" -Result $command
+		#$command = [Verba.Wbotho]::ResetKeyEx("$($KeyTo)$($KeySeria)", $true)
+		#log -Event "ResetKey" -Result $command
 
 		Return $i
 	}
@@ -106,19 +106,19 @@ Function Decrypt {
 
 Function Sign {
 	Param (
-		$KeyPath,	# Путь к каталогу с ключами
+		$KeyPath = "C:\Pub",	# Путь к каталогу с ключами
 		$KeyNumber	# Номер ключа
 	)
 
 	Begin {
 		$i = 0;
-		$command = [Verba.Wbotho]::InitKey("A:", "")
-		log -Event "InitKey" -Result $command
+		#$command = [Verba.Wbotho]::InitKey("A:", "")
+		#log -Event "InitKey" -Result $command
 
-		$command = [Verba.Wbotho]::SignInit("", $KeyPath)
+		$command = [Verba.Wbotho]::SignInit($KeyPath, $KeyPath)
 		log -Event "SignInit" -Result $command
 
-		$command = [Verba.Wbotho]::SignLogIn("A:")
+		$command = [Verba.Wbotho]::SignLogIn($KeyPath) #"A:"
 		log -Event "SignLogIn" -Result $command
 	}
 
@@ -137,8 +137,8 @@ Function Sign {
 		$command = [Verba.Wbotho]::SignDone()
 		log -Event "SignDone" -Result $command
 
-		$command = [Verba.Wbotho]::ResetKeyEx($KeyNumber, $true)
-		log -Event "ResetKey" -Result $command	
+		#$command = [Verba.Wbotho]::ResetKeyEx($KeyNumber, $true)
+		#log -Event "ResetKey" -Result $command	
 
 		Return $i
 	}
@@ -160,19 +160,19 @@ Function Unsign {
 
 Function Verify {
 	Param (
-		$KeyPath,	# Путь к каталогу с ключами
-		$KeyNumber	# Номер ключа
+		$KeyPath = "C:\Pub"	# Путь к каталогу с ключами
+		#$KeyNumber	# Номер ключа
 	)
 
 	Begin {
 		$i = 0;
-		$command = [Verba.Wbotho]::InitKey("A:", "")
-		log -Event "InitKey" -Result $command
+		#$command = [Verba.Wbotho]::InitKey("A:", "")
+		#log -Event "InitKey" -Result $command
 
-		$command = [Verba.Wbotho]::SignInit("", $KeyPath)
+		$command = [Verba.Wbotho]::SignInit($KeyPath, $KeyPath)
 		log -Event "SignInit" -Result $command
 
-		$command = [Verba.Wbotho]::SignLogIn("A:")
+		$command = [Verba.Wbotho]::SignLogIn($KeyPath) #"A:"
 		log -Event "SignLogIn" -Result $command
 	}
 
@@ -191,8 +191,8 @@ Function Verify {
  		$command = [Verba.Wbotho]::SignDone()
 		log -Event "SignDone" -Result $command
 
-		$command = [Verba.Wbotho]::ResetKeyEx($KeyNumber, $true)
-		log -Event "ResetKey" -Result $command
+		#$command = [Verba.Wbotho]::ResetKeyEx($KeyNumber, $true)
+		#log -Event "ResetKey" -Result $command
 
 		Return $i
 	}

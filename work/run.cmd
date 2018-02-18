@@ -1,2 +1,2 @@
 @echo off
-PowerShell.exe -ExecutionPolicy Bypass %~dp0Verba.ps1
+PowerShell.exe -ExecutionPolicy Bypass -File %~dp0test.ps1

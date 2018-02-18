@@ -413,7 +413,7 @@ namespace Verba
             {
                 return ret;
             }
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < (int)count; i++)
             {
                 switch (list.Signs[i].Status)
                 {
