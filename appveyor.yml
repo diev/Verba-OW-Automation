@@ -48,7 +48,7 @@ build:
   verbosity: minimal
 before_package:
 - cmd: >-
-    copy %APPVEYOR_PROJECT_NAME%\bin\%CONFIGURATION%\%APPVEYOR_PROJECT_NAME%.exe*
+    copy vs\bin\%CONFIGURATION%\%APPVEYOR_PROJECT_NAME%.exe*
 
     echo %APPVEYOR_PROJECT_NAME%.exe >>Package
 
