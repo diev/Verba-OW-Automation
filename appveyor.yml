@@ -48,11 +48,11 @@ build:
   verbosity: minimal
 before_package:
 - cmd: >-
-    copy vs\bin\%CONFIGURATION%\Verba.exe*
+    copy vs\bin\%CONFIGURATION%\Verba.exe* test
 
-    echo Verba.exe >>Package
+    rd /s /q vs\bin
 
-    echo Verba.exe.config >>Package
+    rd /s /q vs\obj
 
     echo pub\* >>Package
 
