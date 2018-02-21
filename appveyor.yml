@@ -48,11 +48,11 @@ build:
   verbosity: minimal
 before_package:
 - cmd: >-
-    copy vs\bin\%CONFIGURATION%\%APPVEYOR_PROJECT_NAME%.exe*
+    copy vs\bin\%CONFIGURATION%\Verba.exe*
 
-    echo %APPVEYOR_PROJECT_NAME%.exe >>Package
+    echo Verba.exe >>Package
 
-    echo %APPVEYOR_PROJECT_NAME%.exe.config >>Package
+    echo Verba.exe.config >>Package
 
     echo pub\* >>Package
 
