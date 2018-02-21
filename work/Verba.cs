@@ -3,6 +3,7 @@
 // Source https://github.com/diev/Verba-OW-Automation
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace Verba
@@ -67,7 +68,7 @@ namespace Verba
     public struct OpenKey
     {
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 304)]
-        public string Record;
+        public byte[] Bytes;
     }
 
     /// <summary>
@@ -156,7 +157,7 @@ namespace Verba
         /// <remarks>extern T16bit WINAPI EnCryptFile (char* file_in, char* file_out, char* From, 
         /// void** open_keys_array, T16bit open_keys_quantity, T32bit flags);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "EnCryptFileEx", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort EnCryptFileEx(string fileIn, string fileOut, string id, KeyList keys, uint keysCount, ulong flags);
+        public static extern ushort EnCryptFileEx(string fileIn, string fileOut, string id, IntPtr keys, uint keysCount, ulong flags);
 
         /// <summary>
         /// 8.3.6 Расшифрование файла (расширенное)
@@ -241,7 +242,7 @@ namespace Verba
         /// <remarks>extern T16bit WINAPI check_file_sign_ex(char* file_name, void** open_keys_array, unsigned long open_keys_quantity, 
         /// unsigned char* count, Check_Status_Ptr* status_array);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "check_file_sign_ex", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort CheckFileSignEx(string file, KeyList keys, uint keysCount, out byte count, out CheckList list);
+        public static extern ushort CheckFileSignEx(string file, IntPtr keys, uint keysCount, out byte count, out CheckList list);
         // FreeMemory(list) finally!
 
         /// <summary>
@@ -350,12 +351,13 @@ namespace Verba
     }
 
     /// <summary>
-    /// Класс методов для поточных PowerShell Process {}
+    /// Класс базовых методов для поточных PowerShell Process {}
+    /// (Используются справочники на диске.)
     /// </summary>
     public static class Posh
     {
         /// <summary>
-        /// Зашифровать файл
+        /// Зашифрование файла
         /// </summary>
         /// <param name="fileIn">Исходный файл</param>
         /// <param name="fileOut">Зашифрованный файл</param>
@@ -379,18 +381,18 @@ namespace Verba
         }
 
         /// <summary>
-        /// Расшифровать файл
+        /// Расшифрование файла
         /// </summary>
-        /// <param name="fileIn">Исходный файл</param>
+        /// <param name="fileIn">Исходный зашифрованный файл</param>
         /// <param name="fileOut">Расшифрованный файл</param>
-        /// <param name="id">Номер получателя</param>
+        /// <param name="id">Номер получателя (XXXX)</param>
         public static int Decrypt(string fileIn, string fileOut, string id)
         {
             return Wbotho.DeCryptFile(fileIn, fileOut, ushort.Parse(id));
         }
 
         /// <summary>
-        /// Подписать файл
+        /// Подпись файла с добавлением подписи в конец подписываемого файла
         /// </summary>
         /// <param name="fileIn">Исходный файл</param>
         /// <param name="fileOut">Подписанный файл</param>
@@ -401,7 +403,7 @@ namespace Verba
         }
 
         /// <summary>
-        /// Проверить все подписи в конце файла
+        /// Проверка подписи, добавленной в конец исходного файла
         /// </summary>
         /// <param name="file">Файл с подписями</param>
         public static int Verify(string file)
@@ -432,12 +434,95 @@ namespace Verba
         }
 
         /// <summary>
-        /// Удалить все подписи в конце файла
+        /// Удаление подписи, добавленной в конец исходного файла
         /// </summary>
         /// <param name="file">Файл с подписями</param>
         public static int Unsign(string file)
         {
             return Wbotho.DelSign(file, -1);
+        }
+    }
+
+    /// <summary>
+    /// Класс расширенных методов для поточных PowerShell Process {}
+    /// (Используются ключи с предварительной загрузкой в память.)
+    /// </summary>
+    public static class PoshEx //TODO
+    {
+        /// <summary>
+        /// Зашифрование файла (расширенное)
+        /// </summary>
+        /// <param name="fileIn">Исходный файл</param>
+        /// <param name="fileOut">Зашифрованный файл</param>
+        /// <param name="id">Номер отправителя (XXXXSSSSSS)</param>
+        /// <param name="keys">Открытые ключи шифрования получателей</param>
+        public static int EncryptEx(string fileIn, string fileOut, string id, OpenKey[] keys)
+        {
+            var allocated = new List<IntPtr>();
+
+            int ptrSize = Marshal.SizeOf(typeof(IntPtr));
+            IntPtr keysPtr = Marshal.AllocHGlobal(ptrSize * keys.Length);
+            for (int i = 0; i < keys.Length; i++)
+            {
+                IntPtr keyPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(OpenKey)));
+                allocated.Add(keyPtr);
+                Marshal.StructureToPtr(keys[i], keyPtr, false);
+
+                Marshal.WriteIntPtr(keysPtr, i * ptrSize, keyPtr);
+            }
+
+            int ret = Wbotho.EnCryptFileEx(fileIn, fileOut, id, keysPtr, (uint)keys.Length, 0);
+
+            Marshal.FreeHGlobal(keysPtr);
+            foreach (IntPtr ptr in allocated)
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+            return ret;
+        }
+
+        /// <summary>
+        /// Расшифрование файла (расширенное)
+        /// </summary>
+        /// <param name="fileIn">Исходный зашифрованный файл</param>
+        /// <param name="fileOut">Расшифрованный файл</param>
+        /// <param name="id">Номер получателя (XXXXSSSSSS)</param>
+        /// <param name="key">Открытый ключ шифрования отправителя</param>
+        public static int DecryptEx(string fileIn, string fileOut, string id, OpenKey key)
+        {
+            return Wbotho.DeCryptFileEx(fileIn, fileOut, id, key);
+        }
+
+        /// <summary>
+        /// Проверка подписи, добавленной в конец исходного файла (расширенная)
+        /// </summary>
+        /// <param name="file">Исходный файл с подписями</param>
+        /// <param name="keys">Ключи проверки подписей отправителей</param>
+        /// <param name="count">Число обнаруженных подписей</param>
+        /// <param name="list">Массив результатов проверки каждой подписи</param>
+        public static int VerifyEx(string file, OpenKey[] keys, out byte count, out CheckList list)
+        {
+            var allocated = new List<IntPtr>();
+
+            int ptrSize = Marshal.SizeOf(typeof(IntPtr));
+            IntPtr keysPtr = Marshal.AllocHGlobal(ptrSize * keys.Length);
+            for (int i = 0; i < keys.Length; i++)
+            {
+                IntPtr keyPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(OpenKey)));
+                allocated.Add(keyPtr);
+                Marshal.StructureToPtr(keys[i], keyPtr, false);
+
+                Marshal.WriteIntPtr(keysPtr, i * ptrSize, keyPtr);
+            }
+
+            int ret = Wbotho.CheckFileSignEx(file, keysPtr, (uint)keys.Length, out count, out list);
+
+            Marshal.FreeHGlobal(keysPtr);
+            foreach (IntPtr ptr in allocated)
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+            return ret;
         }
     }
 
