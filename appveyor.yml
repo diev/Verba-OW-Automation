@@ -60,6 +60,8 @@ before_package:
 
     echo test\* >>Package
 
+    echo verba\* >>Package
+
     echo vs\* >>Package
 
     echo work\* >>Package
@@ -80,7 +82,7 @@ deploy:
 - provider: GitHub
   tag: v$(appveyor_build_version)
   release: $(appveyor_project_name) v$(appveyor_build_version)
-  description: '* $(appveyor_repo_commit_message)\n\nBuild #$(appveyor_build_number) by AppVeyor $(BuildDate)\nSee docs on http://$(appveyor_account_name).github.io/$(appveyor_project_name)'
+  description: 'Build #$(appveyor_build_number) by AppVeyor $(BuildDate): $(appveyor_repo_commit_message)\nSee docs on $(Site)'
   auth_token:
     secure: CePfctnBFd3iDwgVWlGOD6mfxQZrNBHK7IpsCK/deo2vHxA3lTr2nRnhbqpKqchQ
   artifact: AppZip
@@ -95,6 +97,7 @@ only_commits:
     - pub\
     - samples\
     - test\
+    - verba\
     - vs\
     - work\
     - appveyor.yml

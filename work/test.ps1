@@ -1,17 +1,31 @@
-# Пример вызова функции из любого скрипта PS:
-# . $localDir"verba.ps1" -logfile $log	# Подключаем модуль Верба
-# $files = Get-ChildItem -Recurse $folder | Where {!$_.PSisContainer}
+# Пример вызова функций из любого скрипта PS:
 
-$folder = "c:\work\test"
-$log = "c:\work\test.log"
+# Серия и номера ключей
+$Sr = "941009"
+$D3 = "3939"
+$FS = "2010"
 
-. c:\work\verba.ps1 -logfile $log	# Подключаем модуль Верба
-$files = Get-ChildItem $folder | Where {!$_.PSisContainer}
+# Подключаем скрипты Вербы
+. C:\Verba\Verba.ps1
 
-$files | Sign -KeyNumber "206594104001"
-#$files | Encrypt -KeyFrom "1594942009" -KeyTo "0001"
-$files | Encrypt -KeyFrom "1594942009" -KeyTo "7020"
-$files | Decrypt -KeyTo "1594"
-#$files | Decrypt -KeyTo "7007"
-$files | Verify
-$files | Unsign
+# Тестовые данные
+$folder = "C:\Verba\test"
+$files = Get-ChildItem -Path $folder -Filter *.txt -File
+
+# Перед первым запуском необходимо загрузить все необходимые
+# ключевые носители штатной утилитой asrkeyw.exe
+
+# Все открытые ключи должны быть в одном справочнике (в C:\Pub)
+
+# Подписать (номер КА прописан в JSON)
+$files | Sign-File
+# Зашифровать от нас на получателя (и нас)
+$files | Encrypt-File $D3$Sr $FS$Sr
+# Расшифровать от отправителя (от нас) на нас
+$files | Decrypt-File $FS$Sr $D3$Sr
+# Проверить подписи (все известные) и отсутствие повреждений
+$files | Verify-File
+# Удалить подписи (важно для XML, например)
+$files | Unsign-File
+
+# Тестовые данные вернулись в исходное состояние

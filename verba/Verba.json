@@ -1,0 +1,9 @@
+{
+  "path": {
+    "log": "c:/verba/logs/%Y%m%d.log",
+    "pub": "c:/pub"
+   },
+  "key": {
+    "KA": "206594104002"
+  }
+}

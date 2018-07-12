@@ -92,7 +92,7 @@ namespace Verba
         /// 8.2 Инициализация функций шифрования
         /// </summary>
         /// <param name="sec">Строка пути к секретным ключам</param>
-        /// <param name="pub">Строка пути к каталогу OPENKEY или FAXKEY (NULL, если ключи симметричные)</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY или FAXKEY (NULL, если ключи симметричные)</param>
         /// <returns>0 или код ошибки</returns>
         /// <remarks>extern T16bit WINAPI CryptoInit (char* path, char* base_path);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "CryptoInit", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
@@ -157,7 +157,7 @@ namespace Verba
         /// <remarks>extern T16bit WINAPI EnCryptFile (char* file_in, char* file_out, char* From, 
         /// void** open_keys_array, T16bit open_keys_quantity, T32bit flags);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "EnCryptFileEx", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort EnCryptFileEx(string fileIn, string fileOut, string id, IntPtr keys, uint keysCount, ulong flags);
+        public static extern ushort EnCryptFileEx(string fileIn, string fileOut, string id, IntPtr[] keys, uint keysCount, ulong flags);
 
         /// <summary>
         /// 8.3.6 Расшифрование файла (расширенное)
@@ -169,7 +169,7 @@ namespace Verba
         /// <returns>0 или код ошибки</returns>
         /// <remarks>extern T16bit WINAPI DeCryptFileEx (char* file_in, char* file_out, char* abonent, void* pub_key);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "DeCryptFileEx", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort DeCryptFileEx(string fileIn, string fileOut, string id, OpenKey key);
+        public static extern ushort DeCryptFileEx(string fileIn, string fileOut, string id, byte[] key);
         #endregion Crypt
 
         #region Sign
@@ -314,7 +314,7 @@ namespace Verba
         /// <returns>0 или код ошибки</returns>
         /// <remarks>extern T16bit WINAPI ExtractKey (char* base_dir, char* open_key_ID, void* key);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "ExtractKey", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern ushort ExtractKey(string pub, string id, out OpenKey key);
+        public static extern ushort ExtractKey(string pub, string id, byte[] key);
         #endregion Spr
 
         #region Key
@@ -447,37 +447,31 @@ namespace Verba
     /// Класс расширенных методов для поточных PowerShell Process {}
     /// (Используются ключи с предварительной загрузкой в память.)
     /// </summary>
-    public static class PoshEx //TODO
+    public static class PoshEx
     {
         /// <summary>
         /// Зашифрование файла (расширенное)
         /// </summary>
         /// <param name="fileIn">Исходный файл</param>
         /// <param name="fileOut">Зашифрованный файл</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
         /// <param name="id">Номер отправителя (XXXXSSSSSS)</param>
-        /// <param name="keys">Открытые ключи шифрования получателей</param>
-        public static int EncryptEx(string fileIn, string fileOut, string id, OpenKey[] keys)
+        /// <param name="to">Номер получателя (XXXXSSSSSS)</param>
+        public static int EncryptEx(string fileIn, string fileOut, string pub, string id, string to)
         {
-            var allocated = new List<IntPtr>();
-
-            int ptrSize = Marshal.SizeOf(typeof(IntPtr));
-            IntPtr keysPtr = Marshal.AllocHGlobal(ptrSize * keys.Length);
-            for (int i = 0; i < keys.Length; i++)
+            byte[] key = new byte[304];
+            int ret = Wbotho.ExtractKey(pub, to, key);
+            if (ret != 0)
             {
-                IntPtr keyPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(OpenKey)));
-                allocated.Add(keyPtr);
-                Marshal.StructureToPtr(keys[i], keyPtr, false);
-
-                Marshal.WriteIntPtr(keysPtr, i * ptrSize, keyPtr);
+                return ret;
             }
 
-            int ret = Wbotho.EnCryptFileEx(fileIn, fileOut, id, keysPtr, (uint)keys.Length, 0);
+            IntPtr[] ptr = new IntPtr[] { Marshal.AllocHGlobal(304) };
+            Marshal.Copy(key, 0, ptr[0], 304);
 
-            Marshal.FreeHGlobal(keysPtr);
-            foreach (IntPtr ptr in allocated)
-            {
-                Marshal.FreeHGlobal(ptr);
-            }
+            ret = Wbotho.EnCryptFileEx(fileIn, fileOut, id, ptr, 1, 0);
+
+            Marshal.FreeHGlobal(ptr[0]);
             return ret;
         }
 
@@ -486,11 +480,19 @@ namespace Verba
         /// </summary>
         /// <param name="fileIn">Исходный зашифрованный файл</param>
         /// <param name="fileOut">Расшифрованный файл</param>
-        /// <param name="id">Номер получателя (XXXXSSSSSS)</param>
-        /// <param name="key">Открытый ключ шифрования отправителя</param>
-        public static int DecryptEx(string fileIn, string fileOut, string id, OpenKey key)
+        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
+        /// <param name="id">Номер отправителя (XXXXSSSSSS)</param>
+        /// <param name="to">Номер получателя (XXXXSSSSSS)</param>
+        public static int DecryptEx(string fileIn, string fileOut, string pub, string id, string to)
         {
-            return Wbotho.DeCryptFileEx(fileIn, fileOut, id, key);
+            byte[] key = new byte[304];
+            int ret = Wbotho.ExtractKey(pub, id, key);
+            if (ret != 0)
+            {
+                return ret;
+            }
+
+            return Wbotho.DeCryptFileEx(fileIn, fileOut, to, key);
         }
 
         /// <summary>
