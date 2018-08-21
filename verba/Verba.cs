@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace Verba
@@ -526,6 +527,156 @@ namespace Verba
             }
             return ret;
         }
+
+        #region Bulk
+        /// <summary>
+        /// Пакетное зашифрование файлов
+        /// </summary>
+        /// <param name="pathIn">Папка с исходными файлами</param>
+        /// <param name="mask">Маска файлов для обработки</param>
+        /// <param name="pathOut">Папка для обработанных файлов</param>
+        /// <param name="ext">Новое расширение для обработанных файлов</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
+        /// <param name="id">Номер отправителя (XXXXSSSSSS)</param>
+        /// <param name="to">Номер получателя (XXXXSSSSSS)</param>
+        /// <returns></returns>
+        public static int BulkEncrypt(string pathIn, string mask, string pathOut, string ext, string pub, string id, string to)
+        {
+            Wbotho.CryptoInit(pub, pub);
+
+            byte[] key = new byte[304];
+            int ret = Wbotho.ExtractKey(pub, to, key);
+            if (ret != 0)
+            {
+                return ret;
+            }
+
+            IntPtr[] ptr = new IntPtr[] { Marshal.AllocHGlobal(304) };
+            Marshal.Copy(key, 0, ptr[0], 304);
+
+            foreach (string file in Directory.GetFiles(pathIn, mask))
+            {
+                string fileOut = Path.Combine(pathOut, Path.GetFileNameWithoutExtension(file) + ext);
+                ret = Wbotho.EnCryptFileEx(file, fileOut, id, ptr, 1, 0);
+            }
+
+            Marshal.FreeHGlobal(ptr[0]);
+
+            Wbotho.CryptoDone();
+            return ret;
+        }
+
+        /// <summary>
+        /// Пакетное расшифрование файлов
+        /// </summary>
+        /// <param name="pathIn">Папка с исходными файлами</param>
+        /// <param name="mask">Маска файлов для обработки</param>
+        /// <param name="pathOut">Папка для обработанных файлов</param>
+        /// <param name="ext">Новое расширение для обработанных файлов</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
+        /// <param name="id">Номер отправителя (XXXXSSSSSS)</param>
+        /// <param name="to">Номер получателя (XXXXSSSSSS)</param>
+        /// <returns></returns>
+        public static int BulkDecrypt(string pathIn, string mask, string pathOut, string ext, string pub, string id, string to)
+        {
+            Wbotho.CryptoInit(pub, pub);
+
+            byte[] key = new byte[304];
+            int ret = Wbotho.ExtractKey(pub, id, key);
+            if (ret != 0)
+            {
+                return ret;
+            }
+
+            foreach (string file in Directory.GetFiles(pathIn, mask))
+            {
+                string fileOut = Path.Combine(pathOut, Path.GetFileNameWithoutExtension(file) + ext);
+                ret = Wbotho.DeCryptFileEx(file, fileOut, to, key);
+            }
+
+            Wbotho.CryptoDone();
+            return ret;
+        }
+
+        /// <summary>
+        /// Пакетное подписывание файлов
+        /// </summary>
+        /// <param name="pathIn">Папка с исходными файлами</param>
+        /// <param name="mask">Маска файлов для обработки</param>
+        /// <param name="pathOut">Папка для обработанных файлов</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
+        /// <param name="id">Код аутентификации (КА)</param>
+        /// <returns></returns>
+        public static int BulkSign(string pathIn, string mask, string pathOut, string pub, string id)
+        {
+            Wbotho.SignInit(pub, pub);
+            Wbotho.SignLogIn(pub);
+
+            int ret = 0;
+            foreach (string file in Directory.GetFiles(pathIn, mask))
+            {
+                string fileOut = Path.Combine(pathOut, Path.GetFileName(file));
+                ret = Wbotho.SignFile(file, fileOut, id);
+            }
+
+            Wbotho.SignLogOut();
+            Wbotho.SignDone();
+            return ret;
+        }
+
+        /// <summary>
+        /// Пакетная проверка подписей файлов
+        /// </summary>
+        /// <param name="pathIn">Папка с исходными файлами</param>
+        /// <param name="mask">Маска файлов для обработки</param>
+        /// <param name="pathOut">Папка для обработанных файлов</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
+        /// <returns></returns>
+        public static int BulkVerify(string pathIn, string mask, string pathOut, string pub)
+        {
+            Wbotho.SignInit(pub, pub);
+            Wbotho.SignLogIn(pub);
+
+            int ret = 0;
+            foreach (string file in Directory.GetFiles(pathIn, mask))
+            {
+                string fileOut = Path.Combine(pathOut, Path.GetFileName(file));
+                File.Copy(file, fileOut, true);
+                ret = Posh.Verify(fileOut); //TODO Wbotho.CheckFileSignEx()
+                if (ret != 0)
+                {
+                    File.Delete(fileOut);
+                }
+            }
+
+            Wbotho.SignLogOut();
+            Wbotho.SignDone();
+            return ret;
+        }
+
+        /// <summary>
+        /// Пакетное удаление подписей из файлов
+        /// </summary>
+        /// <param name="pathIn">Папка с исходными файлами</param>
+        /// <param name="mask">Маска файлов для обработки</param>
+        /// <param name="pathOut">Папка для обработанных файлов</param>
+        /// <returns></returns>
+        public static int BulkUnsign(string pathIn, string mask, string pathOut)
+        {
+            int ret = 0;
+            foreach (string file in Directory.GetFiles(pathIn, mask))
+            {
+                string fileOut = Path.Combine(pathOut, Path.GetFileName(file));
+                File.Copy(file, fileOut, true);
+                ret = Wbotho.DelSign(fileOut, -1);
+                if (ret != 0)
+                {
+                    File.Delete(fileOut);
+                }
+            }
+            return ret;
+        }
+        #endregion Bulk
     }
 
     /// <summary>
