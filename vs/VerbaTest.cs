@@ -10,6 +10,9 @@ using System;
 
 namespace Verba
 {
+    /// <summary>
+    /// Тестовая консольная утилита проверки функционирования библиотеки
+    /// </summary>
     class VerbaTest
     {
         static int Main(string[] args)

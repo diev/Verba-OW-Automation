@@ -1,4 +1,10 @@
+# Copyright (c) 2018 Dmitrii Evdokimov. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+# Source https://github.com/diev/Verba-OW-Automation
+
 # Пример вызова функций из любого скрипта PS:
+
+Set-StrictMode -Version Latest
 
 # Серия и номера ключей
 $Sr = "941009"
@@ -6,10 +12,10 @@ $D3 = "3939"
 $FS = "2010"
 
 # Подключаем скрипты Вербы
-. C:\Verba\Verba.ps1
+. .\Verba.ps1
 
 # Тестовые данные
-$folder = "C:\Verba\test"
+$folder = ".\test"
 $files = Get-ChildItem -Path $folder -Filter *.txt -File
 
 # Перед первым запуском необходимо загрузить все необходимые

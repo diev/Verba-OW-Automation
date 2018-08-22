@@ -1,6 +1,6 @@
 {
   "path": {
-    "log": "c:/verba/logs/%Y%m%d.log",
+    "log": "./logs/%Y%m%d.log",
     "pub": "c:/pub"
    },
   "key": {

@@ -23,7 +23,7 @@ install:
 - ps: >-
     $AssemblyFile = "vs\Properties\AssemblyInfo.cs"
 
-    $RegularExpression = [regex] '^\[assembly: AssemblyFileVersion\(\"(\d*\.\d*)\.\d*\.\d*\"\)\]$'
+    $RegularExpression = [regex] '^\[assembly: AssemblyFileVersion\(\"(\d*\.\d*\.\d*)\.\d*\"\)\]$'
 
     $FileContent = Get-Content $AssemblyFile
 

@@ -364,6 +364,7 @@ namespace Verba
         /// <param name="fileOut">Зашифрованный файл</param>
         /// <param name="id">Номер отправителя (серия опционально)</param>
         /// <param name="to">Номера получателей (той же серии) ...</param>
+        /// <returns>0 или код ошибки</returns>
         public static int Encrypt(string fileIn, string fileOut, string id, params string[] to)
         {
             string ser = "";
@@ -387,6 +388,7 @@ namespace Verba
         /// <param name="fileIn">Исходный зашифрованный файл</param>
         /// <param name="fileOut">Расшифрованный файл</param>
         /// <param name="id">Номер получателя (XXXX)</param>
+        /// <returns>0 или код ошибки</returns>
         public static int Decrypt(string fileIn, string fileOut, string id)
         {
             return Wbotho.DeCryptFile(fileIn, fileOut, ushort.Parse(id));
@@ -398,6 +400,7 @@ namespace Verba
         /// <param name="fileIn">Исходный файл</param>
         /// <param name="fileOut">Подписанный файл</param>
         /// <param name="id">Код аутентификации (КА)</param>
+        /// <returns>0 или код ошибки</returns>
         public static int Sign(string fileIn, string fileOut, string id)
         {
             return Wbotho.SignFile(fileIn, fileOut, id);
@@ -438,6 +441,7 @@ namespace Verba
         /// Удаление подписи, добавленной в конец исходного файла
         /// </summary>
         /// <param name="file">Файл с подписями</param>
+        /// <returns>0 или код ошибки</returns>
         public static int Unsign(string file)
         {
             return Wbotho.DelSign(file, -1);
@@ -458,11 +462,12 @@ namespace Verba
         /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
         /// <param name="id">Номер отправителя (XXXXSSSSSS)</param>
         /// <param name="to">Номер получателя (XXXXSSSSSS)</param>
+        /// <returns>0 или код ошибки</returns>
         public static int EncryptEx(string fileIn, string fileOut, string pub, string id, string to)
         {
+            int ret;
             byte[] key = new byte[304];
-            int ret = Wbotho.ExtractKey(pub, to, key);
-            if (ret != 0)
+            if ((ret = Wbotho.ExtractKey(pub, to, key)) > 0)
             {
                 return ret;
             }
@@ -486,9 +491,9 @@ namespace Verba
         /// <param name="to">Номер получателя (XXXXSSSSSS)</param>
         public static int DecryptEx(string fileIn, string fileOut, string pub, string id, string to)
         {
+            int ret;
             byte[] key = new byte[304];
-            int ret = Wbotho.ExtractKey(pub, id, key);
-            if (ret != 0)
+            if ((ret = Wbotho.ExtractKey(pub, id, key)) > 0)
             {
                 return ret;
             }
@@ -503,6 +508,7 @@ namespace Verba
         /// <param name="keys">Ключи проверки подписей отправителей</param>
         /// <param name="count">Число обнаруженных подписей</param>
         /// <param name="list">Массив результатов проверки каждой подписи</param>
+        /// <returns>0 или код ошибки</returns>
         public static int VerifyEx(string file, OpenKey[] keys, out byte count, out CheckList list)
         {
             var allocated = new List<IntPtr>();
@@ -533,20 +539,21 @@ namespace Verba
         /// Пакетное зашифрование файлов
         /// </summary>
         /// <param name="pathIn">Папка с исходными файлами</param>
-        /// <param name="mask">Маска файлов для обработки</param>
-        /// <param name="pathOut">Папка для обработанных файлов</param>
-        /// <param name="ext">Новое расширение для обработанных файлов</param>
-        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
+        /// <param name="mask">Маска файлов для обработки (*.*)</param>
+        /// <param name="pathOut">Папка для зашифрованных файлов (e)</param>
+        /// <param name="ext">Новое расширение для зашифрованных файлов (.*)</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY (\Pub)</param>
         /// <param name="id">Номер отправителя (XXXXSSSSSS)</param>
         /// <param name="to">Номер получателя (XXXXSSSSSS)</param>
-        /// <returns></returns>
-        public static int BulkEncrypt(string pathIn, string mask, string pathOut, string ext, string pub, string id, string to)
+        /// <param name="move">Удалять исходные файлы в случае успеха</param>
+        /// <returns>0 или код последней ошибки</returns>
+        public static int BulkEncrypt(string pathIn, string mask, string pathOut, string ext, string pub, string id, string to, bool move)
         {
             Wbotho.CryptoInit(pub, pub);
 
+            int ret;
             byte[] key = new byte[304];
-            int ret = Wbotho.ExtractKey(pub, to, key);
-            if (ret != 0)
+            if ((ret = Wbotho.ExtractKey(pub, to, key)) > 0)
             {
                 return ret;
             }
@@ -554,10 +561,23 @@ namespace Verba
             IntPtr[] ptr = new IntPtr[] { Marshal.AllocHGlobal(304) };
             Marshal.Copy(key, 0, ptr[0], 304);
 
+            Directory.CreateDirectory(pathOut);
+            bool changeExt = !ext.Equals(".*");
+
             foreach (string file in Directory.GetFiles(pathIn, mask))
             {
-                string fileOut = Path.Combine(pathOut, Path.GetFileNameWithoutExtension(file) + ext);
-                ret = Wbotho.EnCryptFileEx(file, fileOut, id, ptr, 1, 0);
+                string fileOut = Path.Combine(pathOut, changeExt ?
+                    Path.GetFileNameWithoutExtension(file) + ext :
+                    Path.GetFileName(file));
+                int r = Wbotho.EnCryptFileEx(file, fileOut, id, ptr, 1, 0);
+                if (r == 0 && move && File.Exists(fileOut))
+                { 
+                    File.Delete(file);
+                }
+                else
+                {
+                    ret = r;
+                }
             }
 
             Marshal.FreeHGlobal(ptr[0]);
@@ -570,28 +590,42 @@ namespace Verba
         /// Пакетное расшифрование файлов
         /// </summary>
         /// <param name="pathIn">Папка с исходными файлами</param>
-        /// <param name="mask">Маска файлов для обработки</param>
-        /// <param name="pathOut">Папка для обработанных файлов</param>
-        /// <param name="ext">Новое расширение для обработанных файлов</param>
-        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
+        /// <param name="mask">Маска файлов для обработки (*.*)</param>
+        /// <param name="pathOut">Папка для расшифрованных файлов (d)</param>
+        /// <param name="ext">Новое расширение для расшифрованных файлов (.*)</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY (\Pub)</param>
         /// <param name="id">Номер отправителя (XXXXSSSSSS)</param>
         /// <param name="to">Номер получателя (XXXXSSSSSS)</param>
-        /// <returns></returns>
-        public static int BulkDecrypt(string pathIn, string mask, string pathOut, string ext, string pub, string id, string to)
+        /// <param name="move">Удалять исходные файлы в случае успеха</param>
+        /// <returns>0 или код последней ошибки</returns>
+        public static int BulkDecrypt(string pathIn, string mask, string pathOut, string ext, string pub, string id, string to, bool move)
         {
             Wbotho.CryptoInit(pub, pub);
 
+            int ret;
             byte[] key = new byte[304];
-            int ret = Wbotho.ExtractKey(pub, id, key);
-            if (ret != 0)
+            if ((ret = Wbotho.ExtractKey(pub, id, key)) > 0)
             {
                 return ret;
             }
 
+            Directory.CreateDirectory(pathOut);
+            bool changeExt = !ext.Equals(".*");
+
             foreach (string file in Directory.GetFiles(pathIn, mask))
             {
-                string fileOut = Path.Combine(pathOut, Path.GetFileNameWithoutExtension(file) + ext);
-                ret = Wbotho.DeCryptFileEx(file, fileOut, to, key);
+                string fileOut = Path.Combine(pathOut, changeExt ?
+                    Path.GetFileNameWithoutExtension(file) + ext :
+                    Path.GetFileName(file));
+                int r = Wbotho.DeCryptFileEx(file, fileOut, to, key);
+                if (r == 0 && move && File.Exists(fileOut))
+                {
+                    File.Delete(file);
+                }
+                else
+                {
+                    ret = r;
+                }
             }
 
             Wbotho.CryptoDone();
@@ -602,21 +636,32 @@ namespace Verba
         /// Пакетное подписывание файлов
         /// </summary>
         /// <param name="pathIn">Папка с исходными файлами</param>
-        /// <param name="mask">Маска файлов для обработки</param>
-        /// <param name="pathOut">Папка для обработанных файлов</param>
-        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
-        /// <param name="id">Код аутентификации (КА)</param>
-        /// <returns></returns>
-        public static int BulkSign(string pathIn, string mask, string pathOut, string pub, string id)
+        /// <param name="mask">Маска файлов для обработки (*.*)</param>
+        /// <param name="pathOut">Папка для подписанных файлов (s)</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY (\Pub)</param>
+        /// <param name="id">Код аутентификации - КА (XXXXSSSSSSYY)</param>
+        /// <param name="move">Удалять исходные файлы в случае успеха</param>
+        /// <returns>0 или код последней ошибки</returns>
+        public static int BulkSign(string pathIn, string mask, string pathOut, string pub, string id, bool move)
         {
             Wbotho.SignInit(pub, pub);
             Wbotho.SignLogIn(pub);
+
+            Directory.CreateDirectory(pathOut);
 
             int ret = 0;
             foreach (string file in Directory.GetFiles(pathIn, mask))
             {
                 string fileOut = Path.Combine(pathOut, Path.GetFileName(file));
-                ret = Wbotho.SignFile(file, fileOut, id);
+                int r = Wbotho.SignFile(file, fileOut, id);
+                if (r == 0 && move && File.Exists(fileOut))
+                {
+                    File.Delete(file);
+                }
+                else
+                {
+                    ret = r;
+                }
             }
 
             Wbotho.SignLogOut();
@@ -628,24 +673,32 @@ namespace Verba
         /// Пакетная проверка подписей файлов
         /// </summary>
         /// <param name="pathIn">Папка с исходными файлами</param>
-        /// <param name="mask">Маска файлов для обработки</param>
-        /// <param name="pathOut">Папка для обработанных файлов</param>
-        /// <param name="pub">Строка пути к каталогу c OPENKEY</param>
-        /// <returns></returns>
-        public static int BulkVerify(string pathIn, string mask, string pathOut, string pub)
+        /// <param name="mask">Маска файлов для обработки (*.*)</param>
+        /// <param name="pathOut">Папка для проверенных файлов (v)</param>
+        /// <param name="pub">Строка пути к каталогу c OPENKEY (\Pub)</param>
+        /// <param name="move">Удалять исходные файлы в случае успеха</param>
+        /// <returns>0 или код последней ошибки</returns>
+        public static int BulkVerify(string pathIn, string mask, string pathOut, string pub, bool move)
         {
             Wbotho.SignInit(pub, pub);
             Wbotho.SignLogIn(pub);
+
+            Directory.CreateDirectory(pathOut);
 
             int ret = 0;
             foreach (string file in Directory.GetFiles(pathIn, mask))
             {
                 string fileOut = Path.Combine(pathOut, Path.GetFileName(file));
                 File.Copy(file, fileOut, true);
-                ret = Posh.Verify(fileOut); //TODO Wbotho.CheckFileSignEx()
-                if (ret != 0)
+                int r = Posh.Verify(fileOut); //TODO Wbotho.CheckFileSignEx()
+                if (r == 0 && move && File.Exists(fileOut))
+                {
+                    File.Delete(file);
+                }
+                else
                 {
                     File.Delete(fileOut);
+                    ret = r;
                 }
             }
 
@@ -658,20 +711,28 @@ namespace Verba
         /// Пакетное удаление подписей из файлов
         /// </summary>
         /// <param name="pathIn">Папка с исходными файлами</param>
-        /// <param name="mask">Маска файлов для обработки</param>
-        /// <param name="pathOut">Папка для обработанных файлов</param>
-        /// <returns></returns>
-        public static int BulkUnsign(string pathIn, string mask, string pathOut)
+        /// <param name="mask">Маска файлов для обработки (*.*)</param>
+        /// <param name="pathOut">Папка для очищенных файлов (u)</param>
+        /// <param name="move">Удалять исходные файлы в случае успеха</param>
+        /// <returns>0 или код последней ошибки</returns>
+        public static int BulkUnsign(string pathIn, string mask, string pathOut, bool move)
         {
+            Directory.CreateDirectory(pathOut);
+
             int ret = 0;
             foreach (string file in Directory.GetFiles(pathIn, mask))
             {
                 string fileOut = Path.Combine(pathOut, Path.GetFileName(file));
                 File.Copy(file, fileOut, true);
-                ret = Wbotho.DelSign(fileOut, -1);
-                if (ret != 0)
+                int r = Wbotho.DelSign(fileOut, -1);
+                if (r == 0 && move && File.Exists(fileOut))
+                {
+                    File.Delete(file);
+                }
+                else
                 {
                     File.Delete(fileOut);
+                    ret = r;
                 }
             }
             return ret;

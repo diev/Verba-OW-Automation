@@ -8,10 +8,11 @@ Set-StrictMode -Version Latest
 $dir = (Split-Path -Parent $MyInvocation.MyCommand.Definition) + "\"
 # Подключаем модуль библиотек
 #Add-Type -Path C:\Verba\Verba.cs
-Add-Type -Path $dir"Verba.cs"
+#Add-Type -Path $dir"Verba.cs"
+Add-Type -Path ..\..\Verba\Verba.cs
 
 # Читаем конфиг
-$config = Get-Content $dir"Verba.json" | ConvertFrom-Json
+$config = Get-Content .\Verba.json | ConvertFrom-Json
 $log = Get-Date -UFormat $config.path.log
 if (!(Test-Path $log)) { New-Item $log -Force | Out-Null }
 #$pub = "c:\pub"
