@@ -16,17 +16,24 @@ echo using System.Runtime.InteropServices;
 
 echo class Program { static void Main^(string[] args^) {
 
+echo if ^(args.Length ^< 6^) {
+echo Console.WriteLine^("Usage: decrypt in * out 1/0 XXXXSSSSSS XXXX[SSSSSS] [ext]"^); return; }
+
 echo string pathIn  = args[0];
 echo string mask    = args[1];
 echo string pathOut = args[2];
-echo string ext     = args[3];
+echo bool move      = args[3] == "0";
 echo string id      = args[4];
 echo string to      = args[5];
-echo bool move      = args[6] == ^"1^";
+
+echo bool changeExt = args.Length ^> 6;
+echo string ext = changeExt ? "." + args[6] : "";
+
+echo if ^(to.Length == 4^) to += id.Substring^(4^);
 
 echo string pub = @"%pub%"; CryptoInit^(pub, pub^);
 echo byte[] key = new byte[304]; if ^(ExtractKey^(pub, id, key^) ^> 0^) return;
-echo Directory.CreateDirectory^(pathOut^); bool changeExt = !ext.Equals^(^".*^"^);
+echo Directory.CreateDirectory^(pathOut^);
 
 echo foreach ^(string file in Directory.GetFiles^(pathIn, mask^)^) {
 echo string fileOut = Path.Combine^(pathOut, changeExt ? Path.GetFileNameWithoutExtension^(file^) + ext : Path.GetFileName^(file^)^);
@@ -34,13 +41,13 @@ echo if ^(DeCryptFileEx^(file, fileOut, to, key^) == 0 ^&^& move ^&^& File.Exist
 
 echo CryptoDone^(^); }
 
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"CryptoInit^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "CryptoInit", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort CryptoInit^(string sec, string pub^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"ExtractKey^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "ExtractKey", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort ExtractKey^(string pub, string id, byte[] key^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"DeCryptFileEx^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "DeCryptFileEx", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort DeCryptFileEx^(string fileIn, string fileOut, string id, byte[] key^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"CryptoDone^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "CryptoDone", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort CryptoDone^(^); }
 )
 
@@ -53,18 +60,25 @@ echo using System.Runtime.InteropServices;
 
 echo class Program { static void Main^(string[] args^) {
 
+echo if ^(args.Length ^< 6^) {
+echo Console.WriteLine^("Usage: encrypt in * out 1/0 XXXXSSSSSS XXXX[SSSSSS] [ext]"^); return; }
+
 echo string pathIn  = args[0];
 echo string mask    = args[1];
 echo string pathOut = args[2];
-echo string ext     = args[3];
+echo bool move      = args[3] == "0";
 echo string id      = args[4];
 echo string to      = args[5];
-echo bool move      = args[6] == ^"1^";
+
+echo bool changeExt = args.Length ^> 6;
+echo string ext = changeExt ? "." + args[6] : "";
+
+echo if ^(to.Length == 4^) to += id.Substring^(4^);
 
 echo string pub = @"%pub%"; CryptoInit^(pub, pub^);
 echo byte[] key = new byte[304]; if ^(ExtractKey^(pub, to, key^) ^> 0^) return;
 echo IntPtr[] ptr = new IntPtr[] { Marshal.AllocHGlobal^(304^) }; Marshal.Copy^(key, 0, ptr[0], 304^);
-echo Directory.CreateDirectory^(pathOut^); bool changeExt = !ext.Equals^(^".*^"^);
+echo Directory.CreateDirectory^(pathOut^);
 
 echo foreach ^(string file in Directory.GetFiles^(pathIn, mask^)^) {
 echo string fileOut = Path.Combine^(pathOut, changeExt ? Path.GetFileNameWithoutExtension^(file^) + ext : Path.GetFileName^(file^)^);
@@ -72,13 +86,13 @@ echo if ^(EnCryptFileEx^(file, fileOut, id, ptr, 1, 0^) == 0 ^&^& move ^&^& File
 
 echo Marshal.FreeHGlobal^(ptr[0]^); CryptoDone^(^); }
 
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"CryptoInit^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "CryptoInit", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort CryptoInit^(string sec, string pub^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"ExtractKey^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "ExtractKey", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort ExtractKey^(string pub, string id, byte[] key^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"EnCryptFileEx^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "EnCryptFileEx", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort EnCryptFileEx^(string fileIn, string fileOut, string id, IntPtr[] keys, uint keysCount, ulong flags^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"CryptoDone^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "CryptoDone", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort CryptoDone^(^); }
 )
 
@@ -91,29 +105,34 @@ echo using System.Runtime.InteropServices;
 
 echo class Program { static void Main^(string[] args^) {
 
+echo if ^(args.Length ^< 4^) {
+echo Console.WriteLine^("Usage: sign in * out 1/0 [%ka%]"^); return; }
+
 echo string pathIn  = args[0];
 echo string mask    = args[1];
 echo string pathOut = args[2];
-echo bool move      = args[3] == ^"1^";
+echo bool move      = args[3] == "0";
+
+echo string id = args.Length ^> 4 ? args[4] : "%ka%";
 
 echo string pub = @"%pub%"; SignInit^(pub, pub^); SignLogIn^(pub^);
 echo Directory.CreateDirectory^(pathOut^);
 
 echo foreach ^(string file in Directory.GetFiles^(pathIn, mask^)^) {
 echo string fileOut = Path.Combine^(pathOut, Path.GetFileName^(file^)^);
-echo if ^(SignFile^(file, fileOut, "%ka%"^) == 0 ^&^& move ^&^& File.Exists^(fileOut^)^) File.Delete^(file^); }
+echo if ^(SignFile^(file, fileOut, id^) == 0 ^&^& move ^&^& File.Exists^(fileOut^)^) File.Delete^(file^); }
 
 echo SignLogOut^(^); SignDone^(^); }
 
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"SignInit^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "SignInit", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignInit^(string sec, string pub^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"SignLogIn^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "SignLogIn", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignLogIn^(string sec^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"SignFile^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "SignFile", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignFile^(string fileIn, string fileOut, [MarshalAs^(UnmanagedType.LPStr, SizeConst = 13^)] string id^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"SignLogOut^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "SignLogOut", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignLogOut^(^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"SignDone^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "SignDone", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignDone^(^); }
 )
 
@@ -126,10 +145,13 @@ echo using System.Runtime.InteropServices;
 
 echo class Program { static void Main^(string[] args^) {
 
+echo if ^(args.Length ^< 4^) {
+echo Console.WriteLine^("Usage: unsign in * out 1/0"^); return; }
+
 echo string pathIn  = args[0];
 echo string mask    = args[1];
 echo string pathOut = args[2];
-echo bool move      = args[3] == ^"1^";
+echo bool move      = args[3] == "0";
 
 echo Directory.CreateDirectory^(pathOut^);
 echo foreach ^(string file in Directory.GetFiles^(pathIn, mask^)^) {
@@ -138,7 +160,7 @@ echo File.Copy^(file, fileOut, true^);
 echo if ^(DelSign^(fileOut, -1^) == 0 ^&^& move ^&^& File.Exists^(fileOut^)^) File.Delete^(file^);
 echo else File.Delete^(fileOut^); }}
 
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"DelSign^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "DelSign", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort DelSign^(string file, sbyte count^); }
 )
 
@@ -151,10 +173,13 @@ echo using System.Runtime.InteropServices;
 
 echo class Program { static void Main^(string[] args^) {
 
+echo if ^(args.Length ^< 4^) {
+echo Console.WriteLine^("Usage: verify in * out 1/0"^); return; }
+
 echo string pathIn  = args[0];
 echo string mask    = args[1];
 echo string pathOut = args[2];
-echo bool move      = args[4] == ^"1^";
+echo bool move      = args[3] == "0";
 
 echo string pub = @"%pub%"; SignInit^(pub, pub^); SignLogIn^(pub^);
 echo Directory.CreateDirectory^(pathOut^);
@@ -181,25 +206,32 @@ echo byte Position; public byte Status; uint Date; }
 echo [StructLayout^(LayoutKind.Sequential, CharSet = CharSet.Ansi^)] struct CheckList {
 echo [MarshalAs^(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.Struct^)] public CheckStatus[] Signs; }
 
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"SignInit^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "SignInit", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignInit^(string sec, string pub^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"SignLogIn^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "SignLogIn", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignLogIn^(string sec^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"check_file_sign^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "check_file_sign", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort CheckFileSign^(string file, out byte count, out CheckList list^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"FreeMemory^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "FreeMemory", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern void FreeMemory^(CheckList list^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"SignLogOut^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "SignLogOut", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignLogOut^(^);
-echo [DllImport^(^"wbotho.dll^", EntryPoint = ^"SignDone^", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo [DllImport^("wbotho.dll", EntryPoint = "SignDone", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignDone^(^); }
 )
 
 rem -------------------------------------------------------------------------
+echo Compiling...
+set /a n=0
 for %%f in (%out%\*.cs) do call :compile %%f
+echo.
+choice /m "Delete these %n% temp files"
+if %errorlevel% equ 1 del /f /q %out%\*.cs
 goto :eof
 
 :compile
+set /a n = n+1
+echo %n%. %~nx1
 %net%\csc /nologo /out:%out%\%~n1.exe %1
-del /f /q %1
+rem del /f /q %1
 goto :eof
