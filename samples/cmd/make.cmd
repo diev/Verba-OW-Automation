@@ -1,4 +1,5 @@
 @echo off
+set version=1.3.0.12
 set net=%windir%\Microsoft.NET\Framework\v4.0.30319
 set out=bin
 set pub=c:\pub
@@ -12,7 +13,21 @@ rem -------------------------------------------------------------------------
 
 echo using System;
 echo using System.IO;
+echo using System.Reflection;
 echo using System.Runtime.InteropServices;
+echo using System.Runtime.CompilerServices;
+
+echo [assembly: AssemblyTitle^("Verba Decrypt"^)]
+echo [assembly: AssemblyDescription^("A Verba-OW library wrapper for PowerShell and standalone use."^)]
+echo [assembly: AssemblyConfiguration^(""^)]
+echo [assembly: AssemblyCompany^(""^)]
+echo [assembly: AssemblyProduct^("Verba"^)]
+echo [assembly: AssemblyCopyright^("Copyright (c) 2018 Dmitrii Evdokimov"^)]
+echo [assembly: AssemblyTrademark^(""^)]
+echo [assembly: AssemblyCulture^(""^)]
+echo [assembly: ComVisible^(false^)]
+echo [assembly: AssemblyVersion^("%version%"^)]
+echo [assembly: AssemblyFileVersion^("%version%"^)]
 
 echo class Program { static void Main^(string[] args^) {
 
@@ -56,7 +71,21 @@ rem -------------------------------------------------------------------------
 
 echo using System;
 echo using System.IO;
+echo using System.Reflection;
 echo using System.Runtime.InteropServices;
+echo using System.Runtime.CompilerServices;
+
+echo [assembly: AssemblyTitle^("Verba Encrypt"^)]
+echo [assembly: AssemblyDescription^("A Verba-OW library wrapper for PowerShell and standalone use."^)]
+echo [assembly: AssemblyConfiguration^(""^)]
+echo [assembly: AssemblyCompany^(""^)]
+echo [assembly: AssemblyProduct^("Verba"^)]
+echo [assembly: AssemblyCopyright^("Copyright (c) 2018 Dmitrii Evdokimov"^)]
+echo [assembly: AssemblyTrademark^(""^)]
+echo [assembly: AssemblyCulture^(""^)]
+echo [assembly: ComVisible^(false^)]
+echo [assembly: AssemblyVersion^("%version%"^)]
+echo [assembly: AssemblyFileVersion^("%version%"^)]
 
 echo class Program { static void Main^(string[] args^) {
 
@@ -101,7 +130,21 @@ rem -------------------------------------------------------------------------
 
 echo using System;
 echo using System.IO;
+echo using System.Reflection;
 echo using System.Runtime.InteropServices;
+echo using System.Runtime.CompilerServices;
+
+echo [assembly: AssemblyTitle^("Verba Sign"^)]
+echo [assembly: AssemblyDescription^("A Verba-OW library wrapper for PowerShell and standalone use."^)]
+echo [assembly: AssemblyConfiguration^(""^)]
+echo [assembly: AssemblyCompany^(""^)]
+echo [assembly: AssemblyProduct^("Verba"^)]
+echo [assembly: AssemblyCopyright^("Copyright (c) 2018 Dmitrii Evdokimov"^)]
+echo [assembly: AssemblyTrademark^(""^)]
+echo [assembly: AssemblyCulture^(""^)]
+echo [assembly: ComVisible^(false^)]
+echo [assembly: AssemblyVersion^("%version%"^)]
+echo [assembly: AssemblyFileVersion^("%version%"^)]
 
 echo class Program { static void Main^(string[] args^) {
 
@@ -141,7 +184,21 @@ rem -------------------------------------------------------------------------
 
 echo using System;
 echo using System.IO;
+echo using System.Reflection;
 echo using System.Runtime.InteropServices;
+echo using System.Runtime.CompilerServices;
+
+echo [assembly: AssemblyTitle^("Verba Unsign"^)]
+echo [assembly: AssemblyDescription^("A Verba-OW library wrapper for PowerShell and standalone use."^)]
+echo [assembly: AssemblyConfiguration^(""^)]
+echo [assembly: AssemblyCompany^(""^)]
+echo [assembly: AssemblyProduct^("Verba"^)]
+echo [assembly: AssemblyCopyright^("Copyright (c) 2018 Dmitrii Evdokimov"^)]
+echo [assembly: AssemblyTrademark^(""^)]
+echo [assembly: AssemblyCulture^(""^)]
+echo [assembly: ComVisible^(false^)]
+echo [assembly: AssemblyVersion^("%version%"^)]
+echo [assembly: AssemblyFileVersion^("%version%"^)]
 
 echo class Program { static void Main^(string[] args^) {
 
@@ -169,7 +226,21 @@ rem -------------------------------------------------------------------------
 
 echo using System;
 echo using System.IO;
+echo using System.Reflection;
 echo using System.Runtime.InteropServices;
+echo using System.Runtime.CompilerServices;
+
+echo [assembly: AssemblyTitle^("Verba Verify"^)]
+echo [assembly: AssemblyDescription^("A Verba-OW library wrapper for PowerShell and standalone use."^)]
+echo [assembly: AssemblyConfiguration^(""^)]
+echo [assembly: AssemblyCompany^(""^)]
+echo [assembly: AssemblyProduct^("Verba"^)]
+echo [assembly: AssemblyCopyright^("Copyright (c) 2018 Dmitrii Evdokimov"^)]
+echo [assembly: AssemblyTrademark^(""^)]
+echo [assembly: AssemblyCulture^(""^)]
+echo [assembly: ComVisible^(false^)]
+echo [assembly: AssemblyVersion^("%version%"^)]
+echo [assembly: AssemblyFileVersion^("%version%"^)]
 
 echo class Program { static void Main^(string[] args^) {
 
