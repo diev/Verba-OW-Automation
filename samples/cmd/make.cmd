@@ -1,5 +1,5 @@
 @echo off
-set version=1.3.0.16
+set version=1.3.0.17
 rem set net=%windir%\Microsoft.NET\Framework\v3.5
 set net=%windir%\Microsoft.NET\Framework\v4.0.30319
 
@@ -23,7 +23,7 @@ echo [assembly: AssemblyDescription("A Verba-OW library wrapper for PowerShell a
 echo [assembly: AssemblyConfiguration("Release"^)]
 echo [assembly: AssemblyCompany(""^)]
 echo [assembly: AssemblyProduct("Verba"^)]
-echo [assembly: AssemblyCopyright("Copyright (c) 2018 Dmitrii Evdokimov"^)]
+echo [assembly: AssemblyCopyright("Copyright (c) 2018-2019 Dmitrii Evdokimov"^)]
 echo [assembly: AssemblyTrademark(""^)]
 echo [assembly: AssemblyCulture(""^)]
 echo [assembly: ComVisible(false^)]
@@ -110,28 +110,25 @@ echo using System.Reflection;
 echo [assembly: AssemblyTitle("Verba %app%"^)]
 echo namespace App { partial class Program { static void Main(string[] args^) {
 
-echo if (args.Length ^< 6^) {
-echo Console.WriteLine("Usage: %app% in * out 1/0 XXXXSSSSSS XXXX[SSSSSS] [ext]"^); return; }
+echo if (args.Length ^< 4^) {
+echo   Console.WriteLine(@"Usage: %app% in\[*] out\ XXXX[SSSSSS] XXXXSSSSSS [ext]"^); return; }
 
-echo string pathIn  = args[0];
-echo string mask    = args[1];
-echo string pathOut = args[2];
-echo bool move      = args[3] == "0";
-echo string id      = args[4];
-echo string to      = args[5];
-
-echo bool changeExt = args.Length ^> 6;
-echo string ext = changeExt ? "." + args[6] : "";
-
-echo if (to.Length == 4^) to += id.Substring(4^);
+echo string path = Path.GetDirectoryName(args[0]^);
+echo string mask = Path.GetFileName(args[0]^);
+echo string[] files = Directory.GetFiles(path, mask.Length == 0 ? "*" : mask^); if (files.Length == 0^) return;
+echo string pathOut = args[1]; Directory.CreateDirectory(pathOut^);
+echo string id = args[2]; if (id.Length ^> 10^) id = id.Substring(0, 10^);
+echo string to = args[3]; if (to.Length ^> 10^) to = to.Substring(0, 10^); if (id.Length == 4^) id += to.Substring(4^);
+echo bool changeExt = args.Length ^> 4; string ext = changeExt ? "." + args[4] : string.Empty;
 
 echo string pub = @"%pub%"; CryptoInit(pub, pub^);
 echo byte[] key = new byte[304]; if (ExtractKey(pub, id, key^) ^> 0^) return;
-echo Directory.CreateDirectory(pathOut^);
 
-echo foreach (string file in Directory.GetFiles(pathIn, mask^)^) {
-echo string fileOut = Path.Combine(pathOut, changeExt ? Path.GetFileNameWithoutExtension(file^) + ext : Path.GetFileName(file^)^);
-echo if (DeCryptFileEx(file, fileOut, to, key^) == 0 ^&^& move ^&^& File.Exists(fileOut^)^) File.Delete(file^); }
+echo foreach (string file in files^) {
+echo   string fileOut = Path.Combine(pathOut, changeExt ? Path.GetFileNameWithoutExtension(file^) + ext : Path.GetFileName(file^)^);
+echo   bool ok = DeCryptFileEx(file, fileOut, to, key^) == 0 ^&^& File.Exists(fileOut^);
+echo   if (ok^) { Console.WriteLine(@"%app% {0} {1}", file, fileOut^); File.Delete(file^); }
+echo   else { Console.WriteLine(@"%app% {0} FAILED!", file^); }}
 
 echo CryptoDone(^); }}}
 )
@@ -150,29 +147,26 @@ echo using System.Runtime.InteropServices;
 echo [assembly: AssemblyTitle("Verba %app%"^)]
 echo namespace App { partial class Program { static void Main(string[] args^) {
 
-echo if (args.Length ^< 6^) {
-echo Console.WriteLine("Usage: %app% in * out 1/0 XXXXSSSSSS XXXX[SSSSSS] [ext]"^); return; }
+echo if (args.Length ^< 4^) {
+echo   Console.WriteLine(@"Usage: %app% in\[*] out\ XXXXSSSSSS XXXX[SSSSSS] [ext]"^); return; }
 
-echo string pathIn  = args[0];
-echo string mask    = args[1];
-echo string pathOut = args[2];
-echo bool move      = args[3] == "0";
-echo string id      = args[4];
-echo string to      = args[5];
-
-echo bool changeExt = args.Length ^> 6;
-echo string ext = changeExt ? "." + args[6] : "";
-
-echo if (to.Length == 4^) to += id.Substring(4^);
+echo string path = Path.GetDirectoryName(args[0]^);
+echo string mask = Path.GetFileName(args[0]^);
+echo string[] files = Directory.GetFiles(path, mask.Length == 0 ? "*" : mask^); if (files.Length == 0^) return;
+echo string pathOut = args[1]; Directory.CreateDirectory(pathOut^);
+echo string id = args[2]; if (id.Length ^> 10^) id = id.Substring(0, 10^);
+echo string to = args[3]; if (to.Length ^> 10^) to = to.Substring(0, 10^); if (to.Length == 4^) to += id.Substring(4^);
+echo bool changeExt = args.Length ^> 4; string ext = changeExt ? "." + args[4] : string.Empty;
 
 echo string pub = @"%pub%"; CryptoInit(pub, pub^);
 echo byte[] key = new byte[304]; if (ExtractKey(pub, to, key^) ^> 0^) return;
 echo IntPtr[] ptr = new IntPtr[] { Marshal.AllocHGlobal(304^) }; Marshal.Copy(key, 0, ptr[0], 304^);
-echo Directory.CreateDirectory(pathOut^);
 
-echo foreach (string file in Directory.GetFiles(pathIn, mask^)^) {
-echo string fileOut = Path.Combine(pathOut, changeExt ? Path.GetFileNameWithoutExtension(file^) + ext : Path.GetFileName(file^)^);
-echo if (EnCryptFileEx(file, fileOut, id, ptr, 1, 0^) == 0 ^&^& move ^&^& File.Exists(fileOut^)^) File.Delete(file^); }
+echo foreach (string file in files^) {
+echo   string fileOut = Path.Combine(pathOut, changeExt ? Path.GetFileNameWithoutExtension(file^) + ext : Path.GetFileName(file^)^);
+echo   bool ok = EnCryptFileEx(file, fileOut, id, ptr, 1, 0^) == 0 ^&^& File.Exists(fileOut^);
+echo   if (ok^) { Console.WriteLine(@"%app% {0} {1}", file, fileOut^); File.Delete(file^); }
+echo   else { Console.WriteLine(@"%app% {0} FAILED!", file^); }}
 
 echo Marshal.FreeHGlobal(ptr[0]^); CryptoDone(^); }}}
 )
@@ -190,22 +184,22 @@ echo using System.Reflection;
 echo [assembly: AssemblyTitle("Verba %app%"^)]
 echo namespace App { partial class Program { static void Main(string[] args^) {
 
-echo if (args.Length ^< 4^) {
-echo Console.WriteLine("Usage: %app% in * out 1/0 [%ka%]"^); return; }
+echo if (args.Length ^< 2^) {
+echo   Console.WriteLine(@"Usage: %app% in\[*] out [%ka%]"^); return; }
 
-echo string pathIn  = args[0];
-echo string mask    = args[1];
-echo string pathOut = args[2];
-echo bool move      = args[3] == "0";
-
-echo string id = args.Length ^> 4 ? args[4] : "%ka%";
+echo string path = Path.GetDirectoryName(args[0]^);
+echo string mask = Path.GetFileName(args[0]^);
+echo string[] files = Directory.GetFiles(path, mask.Length == 0 ? "*" : mask^); if (files.Length == 0^) return;
+echo string pathOut = args[1]; Directory.CreateDirectory(pathOut^);
+echo string id = args.Length ^> 2 ? args[2] : "%ka%";
 
 echo string pub = @"%pub%"; SignInit(pub, pub^); SignLogIn(pub^);
-echo Directory.CreateDirectory(pathOut^);
 
-echo foreach (string file in Directory.GetFiles(pathIn, mask^)^) {
-echo string fileOut = Path.Combine(pathOut, Path.GetFileName(file^)^);
-echo if (SignFile(file, fileOut, id^) == 0 ^&^& move ^&^& File.Exists(fileOut^)^) File.Delete(file^); }
+echo foreach (string file in files^) {
+echo   string fileOut = Path.Combine(pathOut, Path.GetFileName(file^)^);
+echo   bool ok = SignFile(file, fileOut, id^) == 0 ^&^& File.Exists(fileOut^);
+echo   if (ok^) { Console.WriteLine(@"%app% {0} {1}", file, fileOut^); File.Delete(file^); }
+echo   else { Console.WriteLine(@"%app% {0} FAILED!", file^); }}
 
 echo SignLogOut(^); SignDone(^); }}}
 )
@@ -223,20 +217,19 @@ echo using System.Reflection;
 echo [assembly: AssemblyTitle("Verba %app%"^)]
 echo namespace App { partial class Program { static void Main(string[] args^) {
 
-echo if (args.Length ^< 4^) {
-echo Console.WriteLine("Usage: %app% in * out 1/0"^); return; }
+echo if (args.Length ^< 2^) {
+echo   Console.WriteLine(@"Usage: %app% in\[*] out\"^); return; }
 
-echo string pathIn  = args[0];
-echo string mask    = args[1];
-echo string pathOut = args[2];
-echo bool move      = args[3] == "0";
+echo string path = Path.GetDirectoryName(args[0]^);
+echo string mask = Path.GetFileName(args[0]^);
+echo string[] files = Directory.GetFiles(path, mask.Length == 0 ? "*" : mask^); if (files.Length == 0^) return;
+echo string pathOut = args[1]; Directory.CreateDirectory(pathOut^);
 
-echo Directory.CreateDirectory(pathOut^);
-echo foreach (string file in Directory.GetFiles(pathIn, mask^)^) {
-echo string fileOut = Path.Combine(pathOut, Path.GetFileName(file^)^);
-echo File.Copy(file, fileOut, true^);
-echo if (DelSign(fileOut, -1^) == 0 ^&^& move ^&^& File.Exists(fileOut^)^) File.Delete(file^);
-echo else File.Delete(fileOut^); }}}}
+echo foreach (string file in files^) {
+echo   string fileOut = Path.Combine(pathOut, Path.GetFileName(file^)^); File.Copy(file, fileOut, true^);
+echo   bool ok = DelSign(fileOut, -1^) == 0 ^&^& File.Exists(fileOut^);
+echo   if (ok^) { Console.WriteLine(@"%app% {0} {1}", file, fileOut^); File.Delete(file^); }
+echo   else { Console.WriteLine(@"%app% {0} FAILED!", file^); File.Delete(fileOut^); }}}}}
 )
 
 rem -------------------------------------------------------------------------
@@ -252,28 +245,27 @@ echo using System.Reflection;
 echo [assembly: AssemblyTitle("Verba %app%"^)]
 echo namespace App { partial class Program { static void Main(string[] args^) {
 
-echo if (args.Length ^< 4^) {
-echo Console.WriteLine("Usage: %app% in * out 1/0"^); return; }
+echo if (args.Length ^< 2^) {
+echo   Console.WriteLine(@"Usage: %app% in\[*] out\"^); return; }
 
-echo string pathIn  = args[0];
-echo string mask    = args[1];
-echo string pathOut = args[2];
-echo bool move      = args[3] == "0";
+echo string path = Path.GetDirectoryName(args[0]^);
+echo string mask = Path.GetFileName(args[0]^);
+echo string[] files = Directory.GetFiles(path, mask.Length == 0 ? "*" : mask^); if (files.Length == 0^) return;
+echo string pathOut = args[1]; Directory.CreateDirectory(pathOut^);
 
 echo string pub = @"%pub%"; SignInit(pub, pub^); SignLogIn(pub^);
-echo Directory.CreateDirectory(pathOut^);
 
-echo foreach (string file in Directory.GetFiles(pathIn, mask^)^) {
-echo string fileOut = Path.Combine(pathOut, Path.GetFileName(file^)^);
-echo File.Copy(file, fileOut, true^);
+echo foreach (string file in files^) {
+echo   string fileOut = Path.Combine(pathOut, Path.GetFileName(file^)^); File.Copy(file, fileOut, true^);
 
-echo int r; byte count; CheckList list;
-echo if ((r = CheckFileSign(fileOut, out count, out list^)^) == 0^) {
-echo for (int i = 0; i ^< (int^)count; i++^) if ((r = list.Signs[i].Status^) ^> 0^) break;
-echo FreeMemory(list^); }
+echo   int r; byte count; CheckList list;
+echo   if ((r = CheckFileSign(fileOut, out count, out list^)^) == 0^) {
+echo     for (int i = 0; i ^< (int^)count; i++^) if ((r = list.Signs[i].Status^) ^> 0^) break;
+echo     FreeMemory(list^); }
 
-echo if (r == 0 ^&^& move ^&^& File.Exists(fileOut^)^) File.Delete(file^);
-echo else File.Delete(fileOut^); }
+echo   bool ok = r == 0 ^&^& File.Exists(fileOut^);
+echo   if (ok^) { Console.WriteLine(@"%app% {0} {1}", file, fileOut^); File.Delete(file^); }
+echo   else { Console.WriteLine(@"%app% {0} FAILED!", file^); File.Delete(fileOut^); }}
 
 echo SignLogOut(^); SignDone(^); }}}
 )
