@@ -1,5 +1,5 @@
 @echo off
-set version=1.3.0.18
+set version=1.3.0.19
 rem set net=%windir%\Microsoft.NET\Framework\v3.5
 set net=%windir%\Microsoft.NET\Framework\v4.0.30319
 
@@ -239,7 +239,9 @@ goto :eof
 :_args
 echo string path = Path.GetDirectoryName(args[0]^);
 echo string mask = Path.GetFileName(args[0]^);
-echo string[] files = Directory.GetFiles(path, mask.Length == 0 ? "*" : mask^); if (files.Length == 0^) return;
+echo string[] files;
+echo try { files = Directory.GetFiles(path, mask.Length == 0 ? "*" : mask^); if (files.Length == 0^) return; }
+echo catch { return; }
 echo string pathOut = args[1]; Directory.CreateDirectory(pathOut^);
 
 echo Encoding enc = Encoding.GetEncoding(1251^);
