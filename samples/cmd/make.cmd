@@ -1,11 +1,12 @@
 @echo off
-set version=1.3.0.19
+set version=1.4.0.20
 rem set net=%windir%\Microsoft.NET\Framework\v3.5
 set net=%windir%\Microsoft.NET\Framework\v4.0.30319
 
 set out=bin
 set pub=c:\pub
 set ka=206194104001
+set sig=sig
 
 set log1=logs\{0:yyyyMMdd}.log
 set log2=P:\PTK PSD\LOG\test_{0:yyyyMMdd}.log
@@ -86,6 +87,26 @@ call :_sdone
 )
 
 rem -------------------------------------------------------------------------
+set app=Sign2
+
+set make=%make% "%app%"
+%1 > "%out%\%app%.cs" (
+
+call :_using
+echo if (args.Length ^< 2^) {
+echo Console.WriteLine(@"Usage: %app% in\[*] out [%ka%]"^); return; }
+call :_args
+echo string id = args.Length ^> 2 ? args[2] : "%ka%";
+call :_sinit
+call :_foreach
+echo string fileSig = fileOut + ".%sig%";
+echo bool ok = SignFileSeparate(file, id, fileSig^) == 0 ^&^& File.Exists(fileSig^);
+echo if (ok^) File.Move(file, fileOut^);
+call :_print
+call :_sdone
+)
+
+rem -------------------------------------------------------------------------
 set app=Unsign
 
 set make=%make% "%app%"
@@ -122,6 +143,29 @@ echo   for (int i = 0; i ^< (int^)count; i++^) if ((r = list.Signs[i].Status^) ^
 echo   FreeMemory(list^); }
 echo bool ok = r == 0;
 echo File.Delete(ok ? file : fileOut^);
+call :_print
+call :_sdone
+)
+
+rem -------------------------------------------------------------------------
+set app=Verify2
+
+set make=%make% "%app%"
+%1 > "%out%\%app%.cs" (
+
+call :_using
+echo if (args.Length ^< 2^) {
+echo Console.WriteLine(@"Usage: %app% in\[*] out\"^); return; }
+call :_args
+call :_sinit
+call :_foreach
+echo string fileSig = file + ".%sig%";
+echo int r; byte count; CheckList list;
+echo if ((r = CheckFileSeparate(file, out count, out list, fileSig^)^) == 0^) {
+echo   for (int i = 0; i ^< (int^)count; i++^) if ((r = list.Signs[i].Status^) ^> 0^) break;
+echo   FreeMemory(list^); }
+echo bool ok = r == 0;
+echo if (ok^) { File.Move(file, fileOut^); File.Move(fileSig, fileOut + ".%sig%"^); }
 call :_print
 call :_sdone
 )
@@ -195,11 +239,17 @@ echo static extern ushort SignLogIn(string sec^);
 echo [DllImport("wbotho.dll", EntryPoint = "SignFile", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort SignFile(string fileIn, string fileOut, [MarshalAs(UnmanagedType.LPStr, SizeConst = 13^)] string id^);
 
+echo [DllImport("wbotho.dll", EntryPoint = "SignFileSeparate", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo static extern ushort SignFileSeparate(string file, [MarshalAs(UnmanagedType.LPStr, SizeConst = 13^)] string id, string fileSig^);
+
 echo [DllImport("wbotho.dll", EntryPoint = "DelSign", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort DelSign(string file, sbyte count^);
 
 echo [DllImport("wbotho.dll", EntryPoint = "check_file_sign", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern ushort CheckFileSign(string file, out byte count, out CheckList list^);
+
+echo [DllImport("wbotho.dll", EntryPoint = "CheckFileSeparate", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
+echo static extern ushort CheckFileSeparate(string file, out byte count, out CheckList list, string fileSig^);
 
 echo [DllImport("wbotho.dll", EntryPoint = "FreeMemory", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true^)]
 echo static extern void FreeMemory(CheckList list^);

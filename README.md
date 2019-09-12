@@ -1,7 +1,7 @@
-# [Verba-OW-Automation](http://diev.github.io/Verba-OW-Automation)
+# [Verba-OW-Automation]
 
-[![Build status](https://ci.appveyor.com/api/projects/status/rhukdxrkjsw5dud7?svg=true)](https://ci.appveyor.com/project/diev/verba-ow-automation)
-[![GitHub Release](https://img.shields.io/github/release/diev/Verba-OW-Automation.svg)](https://github.com/diev/Verba-OW-Automation/releases/latest)
+[![Build status]][appveyor]
+[![GitHub Release]][releases]
 
 Скрипты автоматизации ПО *Верба-OW*.  
 Не встраивание, а именно скрипты - с открытым кодом, используя только 
@@ -18,7 +18,7 @@
 * Из этого ПО для взаимодействия требуется только библиотека **wbotho.dll**.
 * **.NET** штатной версии **3.5** или выше.
 * **PowerShell** штатной версии **2.0** или выше - опционально.
-Потому что можно и просто на [cmd](samples/cmd).
+Потому что можно и просто на [cmd].
 
 ## Что не требуется
 
@@ -30,11 +30,11 @@
 содержащий неточности и не предназначенный для промышленного применения.
 * **Vb** (VbO) - исполняемый модуль командной строки от создателей Верба-W/OW, 
 но против покупки и использования которого Банк России.
-* **Visual Studio** - прилагаемый здесь в папке [vs](vs) проект служит лишь 
+* **Visual Studio** - прилагаемый здесь в папке [vs] проект служит лишь 
 для удобства написания программных текстов в нем и проверки их запускаемости. 
 Эти тексты можно написать в любом подручном редакторе и проверить с помощью 
 системных компиляторов ```csc``` из состава установленных библиотек .NET.
-Примеры их использования есть в папке [test](test):
+Примеры их использования есть в папке [test]:
   * ```csc.cmd``` - для .NET 3.5
   * ```csc4.cmd``` - для .NET 4+
 * Знания C# свежее 2008 года - скрипт на PowerShell будет использовать 
@@ -42,48 +42,75 @@
 например, то и набранный в редакторе текст не должен содержать те 
 нововведения языка C#, которые умеет применять Visual Studio наших дней.
 * Знания, как запускать PowerShell - используйте ```run.cmd``` в 
-папке [posh](samples/posh).
+папке [posh].
 
 ## Как использовать
 
 Написать какой-либо свой обработчик массы файлов, требующих обработки 
 с помощью ПО Верба-OW, на любом скриптовом языке типа PowerShell, CMD, 
 JavaScript или HTA и запускать функции из файла ```Verba.cs``` (в папке 
-[verba](verba)) так, как это показано в примерах в [samples](samples). 
+[verba]) так, как это показано в примерах в [samples]. 
 Никакого постороннего ПО или недоверенных бинарных модулей не требуется.
 
-В папке [work](work) собраны некоторые скрипты обработки обмена ПТК ПСД.
+В папке [work] собраны некоторые скрипты обработки обмена ПТК ПСД.
 
 В отличие от штатного АРМ РМП можно использовать несколько загруженных 
 в память драйвера ключей одновременно, убрав при этом ключевые носители 
 после загрузки с них. Для этого надо лишь сформировать штатными средствами 
-общий справочник, как показано в папке [pub](pub).
+общий справочник, как показано в папке [pub].
 
 Для проверки функционирования скриптов можно использовать как запускаемый 
 PowerShell скриптовый код на языке C#, так и скомпилированный под Ваш 
-.NET ```VerbaTest.exe``` ([пример](samples/VerbaTest)). Синтаксис команд у 
-него почти такой же, как у общеизвестной программы из SDK ```Wftesto.exe```. 
+.NET ```VerbaTest.exe``` ([пример]).
+Синтаксис команд у него почти такой же, как у общеизвестной программы из 
+SDK ```Wftesto.exe```. 
 Сделаны лишь несколько улучшений:
 
 * возврат кода 0 (успешно) или 1+ (были ошибки);
 * очистка всех слотов в драйвере разом (команда ```r``` без параметров);
+* добавлены функции по работе с подписями в отдельном файле.
 
 Это готовый wrapper для запуска функций DLL из любого языка .NET или просто
-из командной строки [cmd](samples/cmd) - этот вариант сейчас развивается
-больше всего.
+из командной строки [cmd] - этот вариант сейчас развивается больше всего.
 
 ## Благодарности
 
-Спасибо всем, чьи идеи мне удалось встретить на форуме 
-[BANKIR.RU](http://bankir.ru/dom/forum/) на стыке Автоматизации и ИБ.
+Спасибо всем, чьи идеи мне удалось встретить на форуме [BANKIR.RU]
+на стыке Автоматизации и ИБ.
 
 ## Лицензионное соглашение
 
-Licensed under the [Apache License, 
-Version 2.0](http://www.apache.org/licenses/LICENSE-2.0 "LICENSE").  
+Licensed under the [Apache License, Version 2.0].  
 Вы можете использовать этот код совершенно свободно без всяких ограничений 
 с моей стороны и без претензий с Вашей.
 
 Если Вы захотите встроить что-то в свои приложения, то Вам необходимо 
 будет проверить необходимость применения правил лицензирования по работе 
 с таким ПО, принятых в Вашем государстве.
+
+[Wiki]: https://github.com/diev/Verba-OW-Automation/wiki
+[Идеи]: https://github.com/diev/Verba-OW-Automation/projects/1
+[Issues]: https://github.com/diev/Verba-OW-Automation/issues
+[releases]: https://github.com/diev/Verba-OW-Automation/releases/latest
+
+[samples]: samples
+[cmd]: samples/cmd
+[posh]: samples/posh
+[пример]: samples/VerbaTest
+[verba]: verba
+[vs]: vs
+[test]: test
+[work]: work
+[pub]: pub
+
+[BANKIR.RU]: http://bankir.ru/dom/forum/
+
+[CHANGELOG]: CHANGELOG.md
+[Apache License, Version 2.0]: LICENSE
+
+[Verba-OW-Automation]: http://diev.github.io/Verba-OW-Automation
+
+[appveyor]: https://ci.appveyor.com/project/diev/verba-ow-automation
+
+[Build status]: https://ci.appveyor.com/api/projects/status/rhukdxrkjsw5dud7?svg=true
+[GitHub Release]: https://img.shields.io/github/release/diev/Verba-OW-Automation.svg

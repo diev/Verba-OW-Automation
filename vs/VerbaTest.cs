@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2018 Dmitrii Evdokimov. All rights reserved.
+﻿// Copyright (c) 2018-2019 Dmitrii Evdokimov. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 // Source https://github.com/diev/Verba-OW-Automation
 
@@ -31,8 +31,12 @@ namespace Verba
                             return Wftesto.GetAbonents(args[1]);
                         case "s": // file.txt file.sig a: 000122222201
                             return Wftesto.Sign(args[1], args[2], args[3], args[4]);
+                        case "s2": // file.txt file.sig a: 000122222201
+                            return Wftesto.SignSeparate(args[1], args[3], args[4], args[2]);
                         case "v": // file.txt c:\pub
                             return Wftesto.Verify(args[1], args[2]);
+                        case "v2": // file.txt file.sig c:\pub
+                            return Wftesto.VerifySeparate(args[1], args[2], args[3]);
                         case "u":
                             return Wftesto.Unsign(args[1]);
                         case "i": // [Key_ID] [Key_Dev]
@@ -194,6 +198,32 @@ namespace Verba
         }
 
         /// <summary>
+        /// Подписать файл с подписью в отдельном файле (новое)
+        /// </summary>
+        /// <param name="file">Исходный файл</param>
+        /// <param name="fileSig">Файл с подписями</param>
+        /// <param name="sec">Путь к секретному ключу</param>
+        /// <param name="id">Код аутентификации (КА)</param>
+        /// <remarks>wftesto.exe s2 file.txt file.sig a: 000122222201</remarks>
+        public static int SignSeparate(string file, string fileSig, string sec, string id)
+        {
+            int ret;
+            if ((ret = Wbotho.SignInit(sec, "")) > 0)
+            {
+                Console.WriteLine("SignInit error : {0}", ret);
+                return ret;
+            }
+            if ((ret = Posh.SignSeparate(file, id, fileSig)) > 0)
+            {
+                Console.WriteLine("SignFileSeparate error : {0}", ret);
+                return ret;
+            }
+            Wbotho.SignDone();
+            Console.WriteLine("File {0} signed to {1}", fileIn, fileOut);
+            return ret;
+        }
+
+        /// <summary>
         /// Проверить все подписи в конце файла (новое: они реально проверяются)
         /// </summary>
         /// <param name="file">Файл с подписями</param>
@@ -212,6 +242,52 @@ namespace Verba
             if ((ret = Wbotho.CheckFileSign(file, out count, out list)) > 0)
             {
                 Console.WriteLine("check_file_sign error : {0}", ret);
+                return ret;
+            }
+            Wbotho.SignDone();
+            for (int i = 0; i < count; i++)
+            {
+                Console.Write("{0} - ", list.Signs[i].Alias);
+                switch (list.Signs[i].Status)
+                {
+                    case 0: //CORRECT
+                        Console.WriteLine("sign is OK");
+                        break;
+                    case 1: //NOT_CORRECT
+                        Console.WriteLine("sign is corrupted");
+                        ret = 26;
+                        break;
+                    case 2: //OKEY_NOT_FOUND
+                        Console.WriteLine("key not found");
+                        ret = 6;
+                        break;
+                }
+            }
+            Wbotho.FreeMemory(list);
+            Console.WriteLine("File {0} verified", file);
+            return ret;
+        }
+
+        /// <summary>
+        /// Проверить все подписи в конце файла (новое: они реально проверяются)
+        /// </summary>
+        /// <param name="file">Подписанный файл</param>
+        /// <param name="fileSig">Файл с подписями</param>
+        /// <param name="pub">Путь к открытым ключам</param>
+        /// <remarks>wftesto.exe v2 file.txt file.sig c:\pub</remarks>
+        public static int VerifySeparate(string file, string fileSig, string pub)
+        {
+            int ret;
+            if ((ret = Wbotho.SignInit("", pub)) > 0)
+            {
+                Console.WriteLine("SignInit error : {0}", ret);
+                return ret;
+            }
+            byte count;
+            CheckList list;
+            if ((ret = Wbotho.CheckFileSeparate(file, out count, out list, fileSig)) > 0)
+            {
+                Console.WriteLine("CheckFileSeparate error : {0}", ret);
                 return ret;
             }
             Wbotho.SignDone();

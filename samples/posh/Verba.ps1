@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2018 Dmitrii Evdokimov. All rights reserved.
+﻿# Copyright (c) 2018-2019 Dmitrii Evdokimov. All rights reserved.
 # Licensed under the Apache License, Version 2.0.
 # Source https://github.com/diev/Verba-OW-Automation
 
@@ -89,6 +89,7 @@ Function Decrypt-File {
 Function Sign-File {
 	Param (
 #		[string]$KA	# Номер ключа подписи
+		[switch]$Separate
 	)
 
 	Begin {
@@ -101,7 +102,8 @@ Function Sign-File {
 
 	Process {
 		$i++
-		$command = [Verba.Posh]::Sign($_.FullName, $_.FullName, $config.key.KA)
+		if ($Separate) { $command = [Verba.Posh]::SignSeparate($_.FullName, $_.FullName + ".sig", $config.key.KA) }
+		else { $command = [Verba.Posh]::Sign($_.FullName, $_.FullName, $config.key.KA) }
 		log -Event "Sign $_" -Result $command
 		Write-Progress -Activity "Подписываем" -Status "Подписано $i" 
 	}
@@ -133,6 +135,10 @@ Function Unsign-File {
 }
 
 Function Verify-File {
+	Param (
+		[switch]$Separate
+	)
+
 	Begin {
 		$i = 0;
 		$command = [Verba.Wbotho]::SignInit($pub, $pub)
@@ -143,7 +149,8 @@ Function Verify-File {
 
 	Process {
 		$i++
-		$command = [Verba.Posh]::Verify($_.FullName)
+		if ($Separate) { $command = [Verba.Posh]::VerifySeparate($_.FullName, $_.FullName + ".sig") }
+		else { $command = [Verba.Posh]::Verify($_.FullName) }
 		log -Event "Verify $_" -Result $command
 		Write-Progress -Activity "Проверяем" -Status "Проверено $i"
 	}

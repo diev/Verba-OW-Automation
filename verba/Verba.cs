@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2018 Dmitrii Evdokimov. All rights reserved.
+﻿// Copyright (c) 2018-2019 Dmitrii Evdokimov. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 // Source https://github.com/diev/Verba-OW-Automation
 
@@ -222,6 +222,18 @@ namespace Verba
             [MarshalAs(UnmanagedType.LPStr, SizeConst = 13)] string id);
 
         /// <summary>
+        /// 8.8.2 Подпись файла с сохранением ЭЦП в отдельном файле
+        /// </summary>
+        /// <param name="file">Исходный файл для подписывания</param>
+        /// <param name="id">Идентификатор абонента (КА)</param>
+        /// <param name="fileSig">Отдельный файл с подписями</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI SignFile (char* src_file_name, char* name, char* sign_file);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "SignFileSeparate", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort SignFileSeparate(string file,
+            [MarshalAs(UnmanagedType.LPStr, SizeConst = 13)] string id, string fileSig);
+
+        /// <summary>
         /// 8.8.3 Проверка подписи, добавленной в конец исходного файла
         /// </summary>
         /// <param name="file">Полное имя файла</param>
@@ -244,6 +256,19 @@ namespace Verba
         /// unsigned char* count, Check_Status_Ptr* status_array);</remarks>
         [DllImport("wbotho.dll", EntryPoint = "check_file_sign_ex", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern ushort CheckFileSignEx(string file, IntPtr keys, uint keysCount, out byte count, out CheckList list);
+        // FreeMemory(list) finally!
+
+        /// <summary>
+        /// 8.8.5 Проверка подписи, сохраненной в отдельном файле
+        /// </summary>
+        /// <param name="file">Полное имя файла</param>
+        /// <param name="count">Число обнаруженных подписей</param>
+        /// <param name="list">Массив результатов проверки каждой подписи</param>
+        /// <param name="fileSig">Отдельный файл с подписями</param>
+        /// <returns>0 или код ошибки</returns>
+        /// <remarks>extern T16bit WINAPI CheckFileSeparate (char* file_name, P8bit count, Check_Status_Ptr* stat_array, char* sign_file);</remarks>
+        [DllImport("wbotho.dll", EntryPoint = "CheckFileSeparate", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern ushort CheckFileSeparate(string file, out byte count, out CheckList list, string fileSig);
         // FreeMemory(list) finally!
 
         /// <summary>
@@ -407,15 +432,59 @@ namespace Verba
         }
 
         /// <summary>
+        /// Подпись файла с сохранением ЭЦП в отдельном файле
+        /// </summary>
+        /// <param name="file">Исходный файл</param>
+        /// <param name="id">Код аутентификации (КА)</param>
+        /// <param name="fileSign">Отдельный файл с подписями</param>
+        /// <returns>0 или код ошибки</returns>
+        public static int SignSeparate(string file, string id, string fileSign)
+        {
+            return Wbotho.SignFileSeparate(file, id, fileSign);
+        }
+
+        /// <summary>
         /// Проверка подписи, добавленной в конец исходного файла
         /// </summary>
-        /// <param name="file">Файл с подписями</param>
+        /// <param name="file">Подписанный файл</param>
         public static int Verify(string file)
         {
             int ret;
             byte count;
             CheckList list;
             if ((ret = Wbotho.CheckFileSign(file, out count, out list)) > 0)
+            {
+                return ret;
+            }
+            for (int i = 0; i < (int)count; i++)
+            {
+                switch (list.Signs[i].Status)
+                {
+                    case 0: //CORRECT
+                        break;
+                    case 1: //NOT_CORRECT
+                        ret = 26;
+                        break;
+                    case 2: //OKEY_NOT_FOUND
+                        ret = 6;
+                        break;
+                }
+            }
+            Wbotho.FreeMemory(list);
+            return ret;
+        }
+
+        /// <summary>
+        /// Проверка подписи, сохраненной в отдельном файле
+        /// </summary>
+        /// <param name="file">Подписанный файл</param>
+        /// <param name="fileSig">Файл с подписями</param>
+        public static int VerifySeparate(string file, string fileSig)
+        {
+            int ret;
+            byte count;
+            CheckList list;
+            if ((ret = Wbotho.CheckFileSeparate(file, out count, out list, fileSig)) > 0)
             {
                 return ret;
             }
