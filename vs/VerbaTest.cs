@@ -219,7 +219,7 @@ namespace Verba
                 return ret;
             }
             Wbotho.SignDone();
-            Console.WriteLine("File {0} signed to {1}", fileIn, fileOut);
+            Console.WriteLine("File {0} signed to {1}", file, fileSig);
             return ret;
         }
 
@@ -310,7 +310,7 @@ namespace Verba
                 }
             }
             Wbotho.FreeMemory(list);
-            Console.WriteLine("File {0} verified", file);
+            Console.WriteLine("File {0} verified with {1}", file, fileSig);
             return ret;
         }
 

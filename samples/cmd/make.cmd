@@ -1,5 +1,5 @@
 @echo off
-set version=1.4.0.20
+set version=1.4.0.21
 rem set net=%windir%\Microsoft.NET\Framework\v3.5
 set net=%windir%\Microsoft.NET\Framework\v4.0.30319
 
